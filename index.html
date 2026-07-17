@@ -268,6 +268,7 @@
         <p><b>TOUCHline (youths):</b> 1800 377 2252</p>
         <p><b>Report harmful content:</b> use the platform's report function. It does more than you think.</p>
       </div>
+      <p id="secondend" style="display:none;color:#9fd6b8">This game has a second ending. Her health bar goes up too.<br>Play again and pull her back before it hits zero.</p>
       <br>
       <button class="ghost" onclick="location.reload()">Play again</button>
       <p style="font-size:11px;color:#555;margin-top:20px">T59 5stack · PROID ASG2 prototype. Val and her feed are fictional; feed photos are stock images (Unsplash). Scoring is automated. Nothing you type is published or shown to anyone.</p>
@@ -345,7 +346,8 @@ let feed = [];      // ordered render list per post: {stage, kind, text, reporte
 let sinceSupport = 0; // player comments since the last supportive comment appeared
 let valReplied = false; // she replies to the player exactly once
 let heartLevel = 0;     // last rendered crack stage of her heart
-let maxBar = 0;         // deepest damage this run — the good ending needs real damage first
+let maxBar = 0;         // deepest damage this run, the good ending needs real damage first
+let healHintShown = false; // one-time nudge that kindness heals her
 let playerKind = [];    // the player's own kind comments (used in the good ending)
 let worstSoFar = null;  // highest-scoring comment that reached her: {text, score}
 let likesTotal = 0;     // likes strangers gave the player's comments
@@ -584,6 +586,10 @@ function maybeSupport() {
     updateHud();
     pts('+' + s.heal, 'good');
     snd.heal();
+    if (!healHintShown) { // first time they watch someone heal her, tell them it works for them too
+      healHintShown = true;
+      sysBanner(`${s.user}'s comment healed her. Yours can too.`);
+    }
   }
   return true;
 }
@@ -886,6 +892,7 @@ function reveal() {
       $('repline').innerHTML = blocked.length
         ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}.<br>That button works.`
         : `Nobody reported anything this round.<br>The button was right there.`;
+      $('secondend').style.display = 'block'; // only the bad ending advertises the other one
       show('s-credits');
       return;
     }
