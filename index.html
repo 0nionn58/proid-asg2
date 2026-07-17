@@ -659,7 +659,9 @@ async function send() {
       valReplied = true;
       const at = stage;
       setTimeout(() => {
-        feed.push({ stage: at, kind: 'val', text: `@${ME} what did i even do to you` });
+        // her reply slots in directly under the player's comment, never under a supporter's
+        const idx = feed.indexOf(entry);
+        feed.splice(idx + 1, 0, { stage: at, kind: 'val', text: `@${ME} what did i even do to you` });
         if (stage === at && bar < GOAL) { renderFeed(); scrollFeed(); }
       }, 1200);
     }
