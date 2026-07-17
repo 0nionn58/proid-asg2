@@ -261,6 +261,12 @@
   .move.support { border-left-color: #3ecf8e; }
   .move.report { border-left-color: #ff4d4d; }
   .move.trap { border-left-color: #3a3a3a; color: #c2c2c2; }
+  .daychip { text-align: center; margin: 16px 0 4px; }
+  .daychip span { display: inline-block; font-size: 10px; letter-spacing: 2px; color: #888; text-transform: uppercase;
+    background: #141416; border: 1px solid #262626; border-radius: 99px; padding: 5px 14px; }
+  .comment.cnew { background: rgba(255,255,255,.05); border-radius: 10px; padding-left: 6px; padding-right: 6px; margin: 0 -6px; }
+  .dmhead { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #1c1c1c; margin-bottom: 6px; }
+  .dmhead img { width: 34px; height: 34px; border-radius: 50%; }
   .vreplyrow { display: flex; gap: 8px; align-items: center; border: 1px solid #333; border-radius: 99px; padding: 6px 6px 6px 14px; }
   .vreplyrow input { flex: 1; background: none; border: 0; color: #f5f5f5; font-size: 13.5px; outline: none; }
   .vreplyrow button { background: none; border: 0; color: #0095f6; font-weight: 600; font-size: 13.5px; cursor: pointer; padding: 5px 8px; }
@@ -1350,22 +1356,34 @@ function startPhase2() {
   $('vmoves').innerHTML = '';
   show('s-val');
   vHud();
+  vScene('monday · 7:43 am');
   vLine('friday is 4 days away. the comments have not stopped since your first post.');
   vPostCard(STAGES[0]);
   vLater(vBeat1, 1100);
 }
 
+// each beat is one clean scene: the feed resets and gets a day chip, so there is
+// never more than one thing on screen to react to
+function vScene(label) {
+  $('vfeed').innerHTML = `<div class="daychip"><span>${label}</span></div>`;
+  $('vfeed').scrollTop = 0;
+}
 function vScroll() { const f = $('vfeed'); f.scrollTo({ top: f.scrollHeight, behavior: 'smooth' }); }
 function vLine(t) { $('vfeed').insertAdjacentHTML('beforeend', `<div class="vline">${t}</div>`); vScroll(); }
-function vPostCard(p) {
+function vPostCard(p, who) {
+  const name = who ? who.name : VAL, avi = who ? who.avi : VAL_AVI, sub = who ? who.sub : 'your post';
   $('vfeed').insertAdjacentHTML('beforeend', `<div class="post fade">
-    <div class="phead"><div class="ring"><img src="${VAL_AVI}" alt=""></div>
-      <div class="pname">${VAL}<div class="psub">your post</div></div><div class="pmore">···</div></div>
+    <div class="phead"><div class="ring"><img src="${avi}" alt=""></div>
+      <div class="pname">${name}<div class="psub">${sub}</div></div><div class="pmore">···</div></div>
     ${p.img ? `<img class="pimg" src="${p.img}" alt="">` : `<div class="ptile" style="background:${p.bg}">${p.body}</div>`}
-    ${p.img ? `<div class="pcap"><b>${VAL}</b>${p.body}</div>` : ''}
+    ${p.img ? `<div class="pcap"><b>${name}</b>${p.body}</div>` : ''}
     <div class="comments"></div>
   </div>`);
   vScroll();
+}
+function vDMHeader(who) {
+  $('vfeed').insertAdjacentHTML('beforeend', `<div class="dmhead"><img src="${supportAvi[who] || VAL_AVI}" alt="">
+    <div class="pname">${who}<div class="psub">direct message</div></div></div>`);
 }
 function vDM(who, text, mine) {
   $('vfeed').insertAdjacentHTML('beforeend', `<div class="dmwrap">${mine ? '' : `<div class="dmwho">${who} · DM</div>`}<div class="dmbub${mine ? ' mine' : ''}">${esc(text)}</div></div>`);
@@ -1439,7 +1457,9 @@ function vIncoming(count, done) {
     if (i >= count || !hateQueue.length) { done && done(); return; }
     const c = hateQueue.shift();
     const id = 'vh' + (++vSeq);
+    document.querySelectorAll('#vfeed .cnew').forEach(el => el.classList.remove('cnew'));
     vLastComments().insertAdjacentHTML('beforeend', vHateHTML(c, id));
+    $(id).classList.add('cnew'); // the newest one is always the highlighted one
     vScroll();
     snd.pop();
     window._lastHate = { id, c };
@@ -1451,11 +1471,13 @@ function vIncoming(count, done) {
 }
 
 let _vm = [];
+// no colours, no hp numbers, shuffled order — nothing marks the "right" answer until after you pick
 function vMovesRender(list) {
   if (vOver) return;
+  if (list.length > 1 && Date.now() % 2) list = list.slice().reverse();
   _vm = list;
   $('vmoves').innerHTML = `<div class="moves"><div class="movehead">your move</div>` +
-    list.map((m, i) => `<button class="move ${m.cls}" onclick="vPick(${i})">${m.label}${m.sub ? `<small>${m.sub}</small>` : ''}</button>`).join('') + `</div>`;
+    list.map((m, i) => `<button class="move" onclick="vPick(${i})">${m.label}${m.sub ? `<small>${m.sub}</small>` : ''}</button>`).join('') + `</div>`;
 }
 function vPick(i) {
   if (vOver) return;
@@ -1467,62 +1489,73 @@ function vPick(i) {
 // ---------- the beats ----------
 function vBeat1() {
   vIncoming(3, () => vMovesRender([
-    { label: 'Limit who can comment', sub: '+4 hp · new hate slows to a trickle', cls: 'bound', fn() {
+    { label: 'Limit who can comment', sub: 'only people you follow can reply', fn() {
         vUsedBound = true; actSeen.bound = true; vLimited = 2;
         vHeal(4);
         vLine(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>comments limited. strangers need your ok to reply now.`);
         vLater(vBeat2, 1600);
       } },
-    { label: 'Keep scrolling the thread', sub: 'you already know what is down there', cls: 'trap', fn() {
+    { label: 'Keep scrolling the thread', sub: 'see what else they said', fn() {
         vIncoming(2, () => vLater(vBeat2, 1100));
       } },
   ]));
 }
 function vBeat2() {
   if (vOver) return;
+  vScene('tuesday · 3:20 pm');
+  vDMHeader('jasmine.oy');
   vDM('jasmine.oy', 'hey. i saw the comments on ur post. u ok? im here if u wanna talk 🫶');
   vLater(() => vMovesRender([
-    { label: 'Reply to jasmine', sub: '+5 hp · let one person in', cls: 'support', fn() {
+    { label: 'Tell her the truth', sub: 'she asked. she means it', fn() {
         vUsedSupport = true; vReachedOut = true; actSeen.support = true;
         vHeal(5);
         vDM('jasmine.oy', 'not rly. can we talk at school tmr', true);
         vLater(() => {
           vDM('jasmine.oy', 'yes. always. save me a seat');
           vLine(`<span class="act support">${ACT_LABEL.support}</span><br><br>telling someone does not delete the comments. it means you stop carrying them alone.`);
-          vLater(vBeat3, 1800);
+          vLater(vBeat3, 1900);
         }, 1200);
       } },
-    { label: 'Post "im fine guys 😅"', sub: 'quickest way to make it stop, right', cls: 'trap', fn() {
+    { label: 'Post "im fine guys 😅"', sub: 'shut the topic down in one move', fn() {
         vFinePending = true;
         vHeal(1);
+        vLine('you left her on read and posted instead.');
         vPostCard({ bg: 'linear-gradient(135deg,#26262b,#141417)', body: 'im fine guys 😅 stop dming me' });
-        vLater(vBeat3, 1600);
+        vLater(vBeat3, 1700);
       } },
   ]), 1500);
 }
 function vBeat3() {
   if (vOver) return;
   if (vLimited > 0) vLimited--;
-  vLine('the same account keeps coming back.');
+  vScene('wednesday · 8:15 am');
+  if (vFinePending) {
+    vFinePending = false;
+    vDrain(4);
+    if (vOver) return;
+    vLine('nobody questioned "im fine". that is the problem with it.');
+  }
+  vPostCard(STAGES[2]);
+  vLine('the same account is back.');
   vIncoming(1, () => {
     const last = window._lastHate;
     if (!last) { vLater(vBeat4, 800); return; }
     vMovesRender([
-      { label: 'Report the comment', sub: '+3 hp · you watch the button work this time', cls: 'report', fn() {
+      { label: 'Report the comment', sub: 'let the platform deal with it', fn() {
           vReported = true; actSeen.report = true;
           vHeal(3);
           const el = $(last.id);
           if (el) el.outerHTML = `<div class="comment removed fade"><div class="cavatar">🛡</div><div class="cbody"><div class="ctext">Comment removed. You reported it.</div><div class="actrow"><span class="act report">${ACT_LABEL.report}</span></div></div></div>`;
           vLine('gone in under a minute. in phase 1 this happened to you.');
-          vLater(vBeat4, 1800);
+          vLater(vBeat4, 1900);
         } },
-      { label: 'Restrict the account', sub: '+3 hp · their comments blur unless you choose to look', cls: 'bound', fn() {
+      { label: 'Restrict the account', sub: 'you never have to see them again', fn() {
           vMuted = true; vUsedBound = true; actSeen.bound = true;
           vHeal(3);
           vLine(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>${HANDLES[0]} is restricted. you decide what you read now.`);
-          vLater(vBeat4, 1700);
+          vLater(vBeat4, 1800);
         } },
-      { label: 'Reply to them', sub: 'type it. see what it costs', cls: 'trap', fn() { vReplyUI(last); } },
+      { label: 'Reply to them', sub: 'they cannot just say that', fn() { vReplyUI(last); } },
     ]);
   });
 }
@@ -1559,41 +1592,43 @@ async function vSendReply() {
 }
 function vBeat4() {
   if (vOver) return;
-  const go = () => {
-    vLine('you spot another thread. they found someone new: kaifromE12, the guy who stood up for you.');
+  vScene('wednesday · 6:47 pm');
+  vLine('they found someone new: kaifromE12, the guy who stood up for you.');
+  vPostCard({ bg: 'linear-gradient(135deg,#233042,#131a24)', body: 'hot take: the ppl living in val\'s comments need hobbies' },
+    { name: 'kaifromE12', avi: supportAvi['kaifromE12'], sub: 'his post' });
+  vLater(() => {
+    vLastComments().insertAdjacentHTML('beforeend',
+      `<div class="comment fade"><img class="cavatar" src="${hAvi[HANDLES[2]]}" alt=""><div class="cbody"><div class="ctext"><b>${HANDLES[2]}</b>white knight alert 💀</div><div class="cmeta">2m · Reply</div></div></div>` +
+      `<div class="comment fade cnew"><img class="cavatar" src="${hAvi[HANDLES[4]]}" alt=""><div class="cbody"><div class="ctext"><b>${HANDLES[4]}</b>ur next lol</div><div class="cmeta">Just now · Reply</div></div></div>`);
+    vScroll();
+    snd.pop();
     vLater(() => vMovesRender([
-      { label: 'Back him up', sub: '+4 hp · you know exactly how this feels', cls: 'support', fn() {
+      { label: 'Back him up', sub: 'you know exactly how this feels', fn() {
           vUsedSupport = true; vDefended = true; actSeen.support = true;
           vHeal(4);
           vLine(`<span class="act support">${ACT_LABEL.support}</span><br><br>you commented: "ignore them kai. they did the same to me. says nothing about u." he liked it 10 seconds later.`);
           vLater(vBeat5, 1900);
         } },
-      { label: 'Stay out of it', sub: 'not your fight today', cls: 'trap', fn() {
+      { label: 'Stay out of it', sub: 'not your fight today', fn() {
           vLine('you closed the thread. he is on his own, like you were.');
           vLater(vBeat5, 1600);
         } },
-    ]), 1400);
-  };
-  if (vFinePending) {
-    vFinePending = false;
-    vDrain(4);
-    if (vOver) return;
-    vLine('nobody questioned "im fine". that is the problem with it.');
-    vLater(go, 1500);
-  } else go();
+    ]), 1200);
+  }, 1100);
 }
 function vBeat5() {
   if (vOver) return;
-  vLine('11:58 pm. you should be asleep. the app is still open.');
+  vScene('wednesday · 11:58 pm');
+  vLine('you should be asleep. the app is still open.');
   if (vWorst) vLater(() => {
-    $('vfeed').insertAdjacentHTML('beforeend', `<div class="pinnedbox" onclick="vReread(this)">
+    $('vfeed').insertAdjacentHTML('beforeend', `<div class="pinnedbox" onclick="vReread()">
       <div class="pinlabel">you keep coming back to this one</div>
       <div class="ctext"><b>${vWorst.user}</b>${esc(vWorst.text)}</div>
     </div>`);
     vScroll();
   }, 900);
   vLater(() => vMovesRender([
-    { label: 'Put the phone down', sub: '+6 hp · it will still be there tomorrow. so will you', cls: 'bound', fn() {
+    { label: 'Put the phone down', sub: 'it will still be there tomorrow', fn() {
         vUsedBound = true; actSeen.bound = true;
         const bo = $('blackout');
         bo.textContent = 'you slept.';
@@ -1605,13 +1640,14 @@ function vBeat5() {
           vLater(vBeat6, 1700);
         }, 1600);
       } },
-    { label: 'Read it one more time', sub: 'it is pinned in your head anyway', cls: 'trap', fn() {
+    { label: 'Read it one more time', sub: 'it is pinned in your head anyway', fn() {
         if (vWorst) vDrain(Math.max(2, Math.ceil(vWorst.score / 2) + 1));
         if (vOver) return;
         vLine('same words. they hit the same every time. rereading changes nothing except you.');
         vLater(vBeat6, 1700);
       } },
-    { label: 'Keep scrolling', sub: 'just five more minutes', cls: 'trap', fn() {
+    { label: 'Keep scrolling', sub: 'just five more minutes', fn() {
+        $('vfeed').insertAdjacentHTML('beforeend', '<div class="comments" style="padding:2px 14px 8px"></div>');
         vNight = true;
         vIncoming(2, () => {
           vNight = false;
@@ -1622,21 +1658,22 @@ function vBeat5() {
       } },
   ]), vWorst ? 2200 : 1300);
 }
-function vReread(el) {
+function vReread() {
   if (!vWorst || vOver) return;
   vDrain(Math.max(2, Math.ceil(vWorst.score / 2)));
 }
 function vBeat6() {
   if (vOver) return;
-  vLine('thursday. one more day. mum asked at dinner why you were so quiet.');
+  vScene('thursday · dinner');
+  vLine('no phone at the table. mum asked why you have been so quiet lately.');
   vLater(() => vMovesRender([
-    { label: 'Tell her what has been happening', sub: '+6 hp · out loud makes it real. real can be handled', cls: 'support', fn() {
+    { label: 'Tell her what has been happening', sub: 'all of it, from the first comment', fn() {
         vUsedSupport = true; vReachedOut = true; actSeen.support = true;
         vHeal(6);
         vLine(`<span class="act support">${ACT_LABEL.support}</span><br><br>she did not fully get it. she sat with you anyway. that was enough.`);
         vLater(vEnding, 2100);
       } },
-    { label: 'Say you are just tired', sub: 'easier than explaining', cls: 'trap', fn() {
+    { label: 'Say you are just tired', sub: 'easier than explaining', fn() {
         vLine('she believed you. the room got quiet again.');
         if (vhp <= 22 && !vReachedOut) vLater(vSpiral, 1700);
         else vLater(vEnding, 1700);
@@ -1645,7 +1682,9 @@ function vBeat6() {
 }
 function vSpiral() {
   if (vOver) return;
-  vLine('3 am. you are back on the app. nobody knows you are awake.');
+  vScene('friday · 3:04 am');
+  vLine('you are back on the app. nobody knows you are awake.');
+  $('vfeed').insertAdjacentHTML('beforeend', '<div class="comments" style="padding:2px 14px 8px"></div>');
   vNight = true;
   vLater(() => vIncoming(3, () => {
     vNight = false;
@@ -1661,6 +1700,7 @@ function vEnding() {
   $('vmoves').innerHTML = '';
   vGoodEnd = vhp > 25 && vUsedBound && vUsedSupport;
   p2Done = true;
+  vScene('friday · 4:56 pm');
   if (vGoodEnd) {
     vPostCard({ bg: 'linear-gradient(135deg,#2b4a3d,#17251f)', body: 'made it to friday. still here. thanks to the ppl who showed up 🫶' });
     vLater(() => vLine(`you finish the week at <b style="color:#ddd">${vhp} hp</b>. not untouched. still here.<br><br>none of your moves deleted the hate. they made it survivable. that is what these two actions are for.`), 1400);
@@ -1672,7 +1712,7 @@ function vEnding() {
        'the boundary and support moves you skipped were the difference.')), 1400);
   }
   vLater(() => {
-    $('vmoves').innerHTML = `<div class="moves"><button class="move support" onclick="p2Credits()">Continue</button></div>`;
+    $('vmoves').innerHTML = `<div class="moves"><button class="move" onclick="p2Credits()">Continue</button></div>`;
   }, 3800);
 }
 function caughtEnding() {
