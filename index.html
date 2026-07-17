@@ -276,7 +276,9 @@
   .pinnedbox { margin: 10px 14px; border: 1px solid #3a3a3a; background: #141416; border-radius: 10px;
     padding: 10px 12px; cursor: pointer; animation: fade .4s ease both; }
   .pinlabel { font-size: 9.5px; color: #888; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
-  .vline { margin: 12px 14px; color: #8a8a8a; font-size: 12.5px; line-height: 1.55; text-align: center; animation: fade .4s ease both; }
+  /* narrator card — the one voice that tells the story, same look every time it speaks */
+  .vline { margin: 14px 14px; padding: 12px 14px; background: #16161a; border: 1px solid #2a2a30; border-left: 3px solid #666;
+    border-radius: 10px; color: #cfcfcf; font-size: 13.5px; line-height: 1.6; text-align: left; animation: fade .4s ease both; }
   .dmwrap { margin: 10px 14px; animation: fade .4s ease both; }
   .dmbub { background: #262629; color: #f0f0f0; border-radius: 18px 18px 18px 4px; padding: 9px 13px;
     font-size: 13.5px; line-height: 1.45; width: max-content; max-width: 82%; margin: 5px 0; }
@@ -1600,9 +1602,9 @@ async function vSendReply() {
 function vBeat4() {
   if (vOver) return;
   vScene('wednesday · 6:47 pm');
-  vLine('they found someone new: kaifromE12, the guy who stood up for you.');
-  vPostCard({ bg: 'linear-gradient(135deg,#233042,#131a24)', body: 'hot take: the ppl living in val\'s comments need hobbies' },
-    { name: 'kaifromE12', avi: supportAvi['kaifromE12'], sub: 'his post' });
+  vLine('remember <b style="color:#ddd">kaifromE12</b>? he stuck up for you in your comments. tonight they went after him for it.');
+  vLater(() => vPostCard({ bg: 'linear-gradient(135deg,#233042,#131a24)', body: 'hot take: the ppl living in val\'s comments need hobbies' },
+    { name: 'kaifromE12', avi: supportAvi['kaifromE12'], sub: 'his post · 2h ago' }), 1400);
   vLater(() => {
     vLastComments().insertAdjacentHTML('beforeend',
       `<div class="comment fade"><img class="cavatar" src="${hAvi[HANDLES[2]]}" alt=""><div class="cbody"><div class="ctext"><b>${HANDLES[2]}</b>white knight alert 💀</div><div class="cmeta">2m · Reply</div></div></div>`);
@@ -1616,7 +1618,9 @@ function vBeat4() {
       vScroll();
       snd.pop();
       vDrain(2);
-    }, 1000);
+      if (vOver) return;
+      vLine('you are not even in this thread, and it still drains you. defending someone has a price. so does watching.');
+    }, 1300);
     if (vOver) return;
     vLater(() => vMovesRender([
       { label: 'Back him up', sub: 'you know exactly how this feels', fn() {
@@ -1629,8 +1633,8 @@ function vBeat4() {
           vLine('you closed the thread. he is on his own, like you were.');
           vLater(vBeat5, 2800);
         } },
-    ]), 2400);
-  }, 1100);
+    ]), 3200);
+  }, 2600);
 }
 function vBeat5() {
   if (vOver) return;
