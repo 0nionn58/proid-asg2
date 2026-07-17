@@ -131,7 +131,7 @@ Bun.serve({
     if (url.pathname === "/" || url.pathname === "/index.html") {
       return new Response(Bun.file(import.meta.dir + "/index.html"));
     }
-    const STATIC = new Set(["/case.png", "/p1.jpg", "/p2.jpg", "/p3.jpg", "/p4.jpg", "/p5.jpg", "/p6.jpg", "/ig-wordmark.svg", "/ig-glyph.svg"]);
+    const STATIC = new Set(["/case.png", "/p1.jpg", "/p2.jpg", "/p3.jpg", "/p4.jpg", "/p5.jpg", "/p6.jpg", "/ig-wordmark.svg", "/ig-glyph.svg", "/confetti.js"]);
     if (STATIC.has(url.pathname)) {
       return new Response(Bun.file(import.meta.dir + url.pathname));
     }

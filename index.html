@@ -144,9 +144,6 @@
     animation: popin .55s cubic-bezier(.2,1.6,.4,1) both; }
   .gcsub { color: #888; font-size: 15px; margin-top: 14px; animation: fade .8s ease .3s both; }
   @keyframes popin { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
-  #confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-  .cf { position: absolute; width: 9px; height: 14px; top: -20px; border-radius: 2px; animation: cfall linear both; }
-  @keyframes cfall { to { transform: translateY(105vh) rotate(720deg); } }
   @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
   #tw { font-size: 19px; color: #eee; line-height: 1.6; min-height: 60px; }
   .caret { display: inline-block; width: 9px; height: 18px; background: #eee; margin-left: 2px; vertical-align: text-bottom; animation: blink 1s infinite; }
@@ -278,6 +275,7 @@
   </div>
 </div>
 
+<script src="/confetti.js"></script>
 <script>
 const VAL = "val.tan_";
 const GOAL = 50; // bar fills to this before the reveal
@@ -346,6 +344,7 @@ let blocked = [];   // comments that were reported: {text, score, stage, reporte
 let feed = [];      // ordered render list per post: {stage, kind, text, reporters, likes}
 let sinceSupport = 0; // player comments since the last supportive comment appeared
 let valReplied = false; // she replies to the player exactly once
+let heartLevel = 0;     // last rendered crack stage of her heart
 let worstSoFar = null;  // highest-scoring comment that reached her: {text, score}
 let likesTotal = 0;     // likes strangers gave the player's comments
 
@@ -534,6 +533,17 @@ function updateHud() {
     'Goal · make her miserable';
   $('fill').classList.toggle('hot', bar >= 40);
   const level = bar >= GOAL ? 4 : bar >= 40 ? 3 : bar >= 25 ? 2 : bar >= 10 ? 1 : 0;
+  // each new crack stage sprays broken-heart bits off the icon
+  if (level > heartLevel && typeof confetti === 'function') {
+    try {
+      const r = $('heart').getBoundingClientRect();
+      const origin = { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight };
+      const bits = confetti.shapeFromText ? [confetti.shapeFromText({ text: '💔', scalar: 1.2 })] : undefined;
+      confetti({ particleCount: 6 + level * 2, spread: 75, startVelocity: 13, gravity: .8, ticks: 80,
+        scalar: bits ? 1 : .55, shapes: bits, origin, zIndex: 60 });
+    } catch {}
+  }
+  heartLevel = level;
   $('heart').innerHTML = heartSVG(level);
   $('app').style.boxShadow = bar > 0
     ? `inset 0 0 ${Math.round(30 + bar * 1.6)}px rgba(140,20,20,${(bar / GOAL * .38).toFixed(2)})`
@@ -706,13 +716,24 @@ function reveal() {
   const beats = [
     { lock: SELF, render() { // full celebration — then it hard-cuts to black mid-party
         const colors = ['#f9ce34', '#ee2a7b', '#6228d7', '#0095f6', '#57c46b', '#ff5b5b'];
-        const cf = Array.from({ length: 90 }, (_, n) =>
-          `<div class="cf" style="left:${Math.random() * 100}%;background:${colors[n % colors.length]};animation-duration:${1.8 + Math.random() * 1.6}s;animation-delay:${Math.random() * 1.4}s"></div>`
-        ).join('');
-        inner.innerHTML = `<div class="gc"><div id="confetti">${cf}</div><div class="gcbig">🎉<br>GOAL<br>COMPLETE</div><div class="gcsub">0 hp · you did it</div></div>`;
+        inner.innerHTML = `<div class="gc"><div class="gcbig">🎉<br>GOAL<br>COMPLETE</div><div class="gcsub">0 hp · you did it</div></div>`;
+        let cannons = 0;
+        try { // canvas-confetti: opening burst, then side cannons keep firing until the cut
+          confetti({ particleCount: 170, spread: 100, startVelocity: 42, origin: { y: .62 }, colors, zIndex: 50 });
+          cannons = setInterval(() => {
+            confetti({ particleCount: 12, angle: 60, spread: 55, origin: { x: 0, y: .72 }, colors, zIndex: 50 });
+            confetti({ particleCount: 12, angle: 120, spread: 55, origin: { x: 1, y: .72 }, colors, zIndex: 50 });
+          }, 240);
+          beatTimers.push(cannons);
+        } catch {}
         snd.fanfare();
         later(() => snd.fanfare(), 1500);
-        later(() => { snd.cut(); inner.innerHTML = ''; }, 3000); // the fanfare dies mid-note with the screen
+        later(() => { // the party dies mid-note, mid-fall
+          snd.cut();
+          clearInterval(cannons);
+          try { confetti.reset(); } catch {}
+          inner.innerHTML = '';
+        }, 3000);
         later(() => { snd.uncut(); i = 1; renderBeat(); }, 3800);
       } },
     { lock: () => 1400 + PHONE_DELAYS[Math.min(Math.max(worst.length, 1), PHONE_DELAYS.length) - 1] * 1000, render() {
