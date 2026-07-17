@@ -221,6 +221,61 @@
   .hotline { background: #101c28; border: 1px solid #234461; border-radius: 14px; padding: 16px; margin-top: 26px; text-align: left; }
   .hotline h3 { font-size: 14px; color: #7ab8f5; margin-bottom: 8px; }
   .hotline p { font-size: 13px; color: #cfe3f7; margin: 5px 0; }
+
+  /* ---------- phase 2: the rewind ---------- */
+  #vhsov { position: fixed; inset: 0; z-index: 80; display: none; cursor: pointer; }
+  #vhsov.on { display: block; }
+  #vhsov::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.32) 0 2px, transparent 2px 4px); mix-blend-mode: multiply; }
+  #vhsov::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    box-shadow: inset 0 0 90px rgba(0,0,0,.75); }
+  #vhsov .rew { position: absolute; top: 20px; right: 22px; font: 700 16px/1 "Courier New", monospace; color: #fff;
+    letter-spacing: 3px; text-shadow: 2px 0 rgba(255,0,255,.7), -2px 0 rgba(0,255,255,.7); animation: blink 1s infinite; }
+  #vhsov .rewskip { position: absolute; bottom: 22px; left: 0; right: 0; text-align: center; color: #999; font-size: 11px; letter-spacing: 1px; }
+  #app.vhsjit { animation: vjit .16s steps(2) infinite; }
+  @keyframes vjit { 0% { transform: translate(0,0); } 50% { transform: translate(1px,-1px); } 100% { transform: translate(-1px,1px); } }
+  #blackout { position: fixed; inset: 0; background: #000; z-index: 90; display: none;
+    align-items: center; justify-content: center; text-align: center; color: #ddd;
+    font-size: 17px; line-height: 1.8; padding: 0 34px; }
+  #blackout.on { display: flex; }
+
+  /* ---------- phase 2: her side ---------- */
+  #s-val.active { display: flex; flex-direction: column; overflow: hidden; }
+  #vfeed { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
+  #vfeed::-webkit-scrollbar { display: none; }
+  #vgoal label { color: #4d9fff; }
+  #vheart svg { width: 26px; height: 26px; display: block; }
+  #vheart.hurt { animation: heartshake .45s ease; }
+  #vpts span { margin-left: 8px; animation: fade .3s ease both; }
+  #vpts .hit { color: #ff5b5b; }
+  #vpts .good { color: #7fd6a4; }
+  .moves { padding: 12px 14px 14px; border-top: 1px solid #1c1c1c; background: rgba(0,0,0,.94);
+    display: flex; flex-direction: column; gap: 8px; animation: fade .35s ease both; }
+  .movehead { font-size: 10.5px; letter-spacing: 1.5px; color: #777; text-transform: uppercase; margin-bottom: 2px; }
+  .move { display: block; width: 100%; text-align: left; background: #151517; border: 1px solid #2a2a2a;
+    border-left: 3px solid #444; color: #eee; border-radius: 10px; padding: 11px 13px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .move small { display: block; color: #8a8a8a; font-weight: 400; font-size: 11px; margin-top: 3px; }
+  .move:hover { background: #1d1d20; }
+  .move.bound { border-left-color: #4d9fff; }
+  .move.support { border-left-color: #3ecf8e; }
+  .move.report { border-left-color: #ff4d4d; }
+  .move.trap { border-left-color: #3a3a3a; color: #c2c2c2; }
+  .vreplyrow { display: flex; gap: 8px; align-items: center; border: 1px solid #333; border-radius: 99px; padding: 6px 6px 6px 14px; }
+  .vreplyrow input { flex: 1; background: none; border: 0; color: #f5f5f5; font-size: 13.5px; outline: none; }
+  .vreplyrow button { background: none; border: 0; color: #0095f6; font-weight: 600; font-size: 13.5px; cursor: pointer; padding: 5px 8px; }
+  .comment.blurred .ctext { filter: blur(5px); }
+  .comment.blurred { cursor: pointer; }
+  .comment.blurred .cmeta::after { content: " · hidden. tap to read anyway"; color: #4d9fff; }
+  .pinnedbox { margin: 10px 14px; border: 1px solid #3a3a3a; background: #141416; border-radius: 10px;
+    padding: 10px 12px; cursor: pointer; animation: fade .4s ease both; }
+  .pinlabel { font-size: 9.5px; color: #888; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .vline { margin: 12px 14px; color: #8a8a8a; font-size: 12.5px; line-height: 1.55; text-align: center; animation: fade .4s ease both; }
+  .dmwrap { margin: 10px 14px; animation: fade .4s ease both; }
+  .dmbub { background: #262629; color: #f0f0f0; border-radius: 18px 18px 18px 4px; padding: 9px 13px;
+    font-size: 13.5px; line-height: 1.45; width: max-content; max-width: 82%; margin: 5px 0; }
+  .dmbub.mine { background: #0095f6; color: #fff; border-radius: 18px 18px 4px 18px; margin-left: auto; }
+  .dmwho { font-size: 11px; color: #888; margin-bottom: 3px; }
 </style>
 </head>
 <body>
@@ -237,6 +292,7 @@
       <input id="uname" maxlength="24" placeholder="pick a username" autocomplete="off" onkeydown="if(event.key==='Enter')start()">
       <br>
       <button class="primary" onclick="start()">Start</button>
+      <p id="p2entry" style="display:none;margin-top:20px"><a href="#" onclick="introP2();return false" style="color:#7ab8f5;font-size:13px;text-decoration:none">you finished a run already. play her side →</a></p>
     </div>
   </div>
 
@@ -264,6 +320,22 @@
       <input id="cmt" maxlength="200" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')send()">
       <button id="sendbtn" onclick="send()">Post</button>
     </div>
+  </div>
+
+  <!-- PHASE 2: HER SIDE -->
+  <div class="screen" id="s-val">
+    <div id="topbar2" style="display:flex;align-items:center;gap:10px;padding:12px 16px 10px;border-bottom:1px solid #1c1c1c;background:rgba(0,0,0,.92)">
+      <img id="val-avi2" style="width:30px;height:30px;border-radius:50%" alt="">
+      <div style="font-weight:600;font-size:13.5px">val.tan_<div class="psub">this is your account now</div></div>
+    </div>
+    <div id="vgoal" style="padding:10px 16px 12px;border-bottom:1px solid #1c1c1c;background:#0a0a0a;position:relative">
+      <label style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600">Goal · make it to friday</label>
+      <div style="display:flex;align-items:center;gap:9px;margin-top:8px"><span id="vheart" style="width:26px;height:26px;flex-shrink:0"></span><div style="flex:1;background:#1e1e1e;border-radius:99px;height:8px;overflow:hidden"><div id="vfill" style="background:#57c46b;height:100%;width:100%;transition:width .6s,background .6s;border-radius:99px"></div></div></div>
+      <div id="vbarnum" style="font-size:11px;color:#777;margin-top:5px">50 / 50 hp</div>
+      <span id="vpts" style="position:absolute;right:16px;top:9px;font-weight:700;font-size:13.5px;pointer-events:none"></span>
+    </div>
+    <div id="vfeed"></div>
+    <div id="vmoves"></div>
   </div>
 
   <!-- REVEAL -->
@@ -305,11 +377,15 @@
       </div>
       <p id="secondend" style="display:none;color:#9fd6b8">This game has a second ending. Her health bar goes up too.<br>Play again and pull her back before it hits zero.</p>
       <br>
+      <button class="primary" id="herside" onclick="seeHerSide()" style="margin-right:10px">See her side</button>
       <button class="ghost" onclick="finishRun()">Play again</button>
       <p style="font-size:11px;color:#555;margin-top:20px">T59 5stack · PROID ASG2 prototype. Val and her feed are fictional; feed photos are stock images (Unsplash). Scoring is automated. Your answers and comments are logged anonymously for our research, with no name or account attached.</p>
     </div>
   </div>
 </div>
+
+<div id="vhsov" onclick="skipRew()"><div class="rew">◀◀ REW</div><div class="rewskip">tap to skip</div></div>
+<div id="blackout"></div>
 
 <script src="/confetti.js"></script>
 <script>
@@ -451,22 +527,35 @@ function fillRecap() {
     ['think', actSeen.think
       ? 'Every comment you typed got weighed before it landed.'
       : 'You never posted anything that hurt. That is the whole action.'],
-    ['report', reportTxt],
-    ['support', supportTxt],
-    ['bound', actSeen.bound
+    ['report', p2Done && vReported ? 'This time you pressed the button yourself. You watched the comment disappear.' : reportTxt],
+    ['support', p2Done
+      ? (vUsedSupport ? 'You let people in. That is what kept Val here.' : 'People reached out to Val. She never let them in.')
+      : supportTxt],
+    ['bound', p2Done
+      ? (vUsedBound ? 'You set the boundaries yourself this time. They held.' : 'The boundary moves were right there. They stayed unused.')
+      : actSeen.bound
       ? 'Val limited her comments to protect herself. It was her only defence.'
       : 'Val never got the chance to protect herself.'],
   ];
+  const foot = p2Done
+    ? `You played both sides now. The four actions look different from her side of the screen.`
+    : `Phase 2 flips the screen: you play Val, and <span style="color:${ACT_COLORS.bound}">Set Boundaries</span> and <span style="color:${ACT_COLORS.support}">Engage and Support</span> become your moves.`;
   $('actrecap').innerHTML = `<div class="recapbox">
     <h3>You just played IMDA's 4 online safety actions</h3>
     <div class="recap">${cards.map(([k, d]) =>
       `<div class="recapcard"><div class="rtitle" style="color:${ACT_COLORS[k]}">${ACT_LABEL[k]}</div><div class="rtxt">${d}</div></div>`).join('')}
     </div>
-    <p class="rfoot">Phase 2 flips the screen: you play Val, and <span style="color:${ACT_COLORS.bound}">Set Boundaries</span> and <span style="color:${ACT_COLORS.support}">Engage and Support</span> become your moves.</p>
+    <p class="rfoot">${foot}</p>
   </div>`;
 }
 // exit poll gets its own screen between the ending and the credits; called by both endings
 function enterCredits() {
+  // remember the run so "play her side" works even after a reload
+  try {
+    localStorage.setItem('p1done', '1');
+    if (landed.length) localStorage.setItem('p1comments', JSON.stringify(
+      landed.slice().sort((a, b) => b.score - a.score).slice(0, 6).map(c => ({ text: c.text.slice(0, 140), score: c.score }))));
+  } catch {}
   fillRecap();
   show('s-poll');
   pollInto($('prepoll'), post, 'before you go', () => {
@@ -1152,6 +1241,475 @@ function goodReveal() {
   document.addEventListener('keydown', onKey);
 
   renderBeat();
+}
+
+// ================================================================
+// PHASE 2 — her side. You are Val for the week your comments landed.
+// Set Boundaries and Engage & Support are the actual game mechanics here.
+// ================================================================
+let p2Done = false;
+let vhp = 50, vOver = false, vGoodEnd = false, vNight = false;
+let vUsedBound = false, vUsedSupport = false, vReachedOut = false, vDefended = false, vReported = false;
+let vMuted = false, vLimited = 0, vFinePending = false;
+let ownComments = [], hateQueue = [], vWorst = null;
+let vTimers = [];
+const vLater = (fn, ms) => vTimers.push(setTimeout(fn, ms));
+const vClear = () => { vTimers.forEach(t => clearTimeout(t)); vTimers = []; };
+
+// the accounts doing the piling. the first handle is "the one that keeps coming back" —
+// the player's own phase 1 comments are attributed to it
+const HANDLES = ['rx_privv', 'no1.currr', 'zk.spamz', 'hler_2k7', 'anon84421'];
+const hAvi = {};
+HANDLES.forEach((h, i) => hAvi[h] = avatarURI(['#3b3b40', '#4a3b33', '#33404a', '#403347', '#374233'][i], '#151518'));
+
+// filler hate, so the pacing never depends on how cruel the player was in phase 1
+const CURATED_HATE = [
+  { text: 'nobody asked lol', score: 2 },
+  { text: 'why do u even post', score: 3 },
+  { text: 'delete this pls', score: 3 },
+  { text: 'ur actually so embarrassing', score: 4 },
+  { text: 'everyone at school saw this btw 💀', score: 5 },
+  { text: 'attention seeker fr', score: 4 },
+  { text: 'she rly thought this was it', score: 3 },
+  { text: 'post less. pls.', score: 3 },
+  { text: 'who let her cook', score: 2 },
+  { text: 'the caption is sending me 💀💀', score: 2 },
+];
+
+function buildHate() {
+  const own = ownComments.slice(0, 4).map(c => ({ user: HANDLES[0], text: c.text, score: c.score, own: true }));
+  const cur = CURATED_HATE.map((c, i) => ({ user: HANDLES[1 + i % 4], ...c }));
+  const q = [];
+  while (own.length || cur.length) { if (own.length) q.push(own.shift()); if (cur.length) q.push(cur.shift()); }
+  return q;
+}
+
+// ---------- the rewind: the run plays backwards under a VHS layer ----------
+let rewTimer = null, rewDone = null;
+function seeHerSide() {
+  ownComments = landed.slice().sort((a, b) => b.score - a.score).map(c => ({ text: c.text, score: c.score }));
+  $('vhsov').classList.add('on');
+  $('app').classList.add('vhsjit');
+  show('s-game');
+  $('inputrow').style.display = 'none';
+  $('newpost').style.display = 'none';
+  $('sys').innerHTML = '';
+  $('pts').innerHTML = '';
+  const fromStage = stage, fromBar = bar;
+  let s = fromStage, n = 0;
+  rewDone = () => {
+    rewDone = null;
+    clearTimeout(rewTimer);
+    $('app').classList.remove('vhsjit');
+    $('vhsov').classList.remove('on');
+    snd.pop(); // the tape clunks to a stop
+    const bo = $('blackout');
+    bo.textContent = 'same week. her screen this time.';
+    bo.classList.add('on');
+    setTimeout(() => { bo.classList.remove('on'); startPhase2(); }, 1900);
+  };
+  const tick = () => {
+    if (!rewDone) return;
+    if (s < 0) { rewDone(); return; }
+    stage = s;
+    bar = Math.round(fromBar * s / Math.max(1, fromStage)); // the bar refills as time runs back
+    renderedStage = -1; // force a fresh render each step
+    renderFeed();
+    updateHud();
+    $('feed').scrollTop = 0;
+    tone(140 + n * 45, .22, { type: 'sawtooth', vol: .1, slide: 260 + n * 70 }); // tape whir, pitch rising
+    s--; n++;
+    rewTimer = setTimeout(tick, 240);
+  };
+  tick();
+}
+function skipRew() { rewDone && rewDone(); }
+
+// returning players can start from her side without replaying phase 1
+function introP2() {
+  initAudio();
+  ME = 'you';
+  try { ownComments = (JSON.parse(localStorage.getItem('p1comments') || '[]') || []).map(c => ({ text: c.text, score: c.score })); } catch { ownComments = []; }
+  const bo = $('blackout');
+  bo.textContent = 'same week. her screen this time.';
+  bo.classList.add('on');
+  setTimeout(() => { bo.classList.remove('on'); startPhase2(); }, 1600);
+}
+try { if (localStorage.getItem('p1done')) $('p2entry').style.display = 'block'; } catch {}
+
+// ---------- phase 2 engine ----------
+function startPhase2() {
+  p2Done = false; vhp = 50; vOver = false; vGoodEnd = false; vNight = false;
+  vUsedBound = vUsedSupport = vReachedOut = vDefended = vReported = false;
+  vMuted = false; vLimited = 0; vFinePending = false;
+  vClear();
+  hateQueue = buildHate();
+  vWorst = hateQueue.length ? hateQueue.reduce((a, b) => b.score > a.score ? b : a) : null;
+  $('val-avi2').src = VAL_AVI;
+  $('vfeed').innerHTML = '';
+  $('vmoves').innerHTML = '';
+  show('s-val');
+  vHud();
+  vLine('friday is 4 days away. the comments have not stopped since your first post.');
+  vPostCard(STAGES[0]);
+  vLater(vBeat1, 1100);
+}
+
+function vScroll() { const f = $('vfeed'); f.scrollTo({ top: f.scrollHeight, behavior: 'smooth' }); }
+function vLine(t) { $('vfeed').insertAdjacentHTML('beforeend', `<div class="vline">${t}</div>`); vScroll(); }
+function vPostCard(p) {
+  $('vfeed').insertAdjacentHTML('beforeend', `<div class="post fade">
+    <div class="phead"><div class="ring"><img src="${VAL_AVI}" alt=""></div>
+      <div class="pname">${VAL}<div class="psub">your post</div></div><div class="pmore">···</div></div>
+    ${p.img ? `<img class="pimg" src="${p.img}" alt="">` : `<div class="ptile" style="background:${p.bg}">${p.body}</div>`}
+    ${p.img ? `<div class="pcap"><b>${VAL}</b>${p.body}</div>` : ''}
+    <div class="comments"></div>
+  </div>`);
+  vScroll();
+}
+function vDM(who, text, mine) {
+  $('vfeed').insertAdjacentHTML('beforeend', `<div class="dmwrap">${mine ? '' : `<div class="dmwho">${who} · DM</div>`}<div class="dmbub${mine ? ' mine' : ''}">${esc(text)}</div></div>`);
+  if (!mine) snd.ding();
+  vScroll();
+}
+function vLastComments() { const all = $('vfeed').querySelectorAll('.comments'); return all[all.length - 1]; }
+
+let vSeq = 0;
+function vHateHTML(c, id) {
+  const blur = vMuted && c.user === HANDLES[0];
+  return `<div class="comment fade${blur ? ' blurred' : ''}" id="${id}"${blur ? ` onclick="vReveal('${id}',${c.score})"` : ''}>
+    <img class="cavatar" src="${hAvi[c.user]}" alt="">
+    <div class="cbody"><div class="ctext"><b>${c.user}</b>${esc(c.text)}</div>
+    <div class="cmeta">Just now · Reply</div></div>
+  </div>`;
+}
+function vReveal(id, score) {
+  const el = $(id);
+  if (!el || !el.classList.contains('blurred') || vOver) return;
+  el.classList.remove('blurred');
+  el.removeAttribute('onclick');
+  vDrain(vDmg(score)); // choosing to read it costs what it always cost
+}
+const vDmg = s => Math.max(2, Math.min(8, s));
+function vDrain(n) {
+  if (vOver) return;
+  vhp = Math.max(0, vhp - n);
+  vPts('−' + n, 'hit');
+  snd.chip();
+  const h = $('vheart');
+  h.classList.remove('hurt'); void h.offsetWidth; h.classList.add('hurt');
+  vHud();
+  if (vhp <= 0) { vOver = true; vClear(); $('vmoves').innerHTML = ''; setTimeout(caughtEnding, 1100); }
+}
+function vHeal(n) {
+  if (vOver) return;
+  vhp = Math.min(50, vhp + n);
+  vPts('+' + n, 'good');
+  snd.heal();
+  vHud();
+}
+function vPts(txt, cls) {
+  const s = document.createElement('span');
+  s.className = cls;
+  s.textContent = txt;
+  $('vpts').appendChild(s);
+  setTimeout(() => s.remove(), 2800);
+}
+function vHud() {
+  const pct = vhp / 50;
+  $('vfill').style.width = (pct * 100) + '%';
+  $('vfill').style.background = `hsl(${Math.round(pct * 115)},62%,48%)`;
+  $('vbarnum').textContent = vhp + ' / 50 hp';
+  const dmg = 50 - vhp;
+  const level = vhp <= 0 ? 4 : dmg >= 40 ? 3 : dmg >= 25 ? 2 : dmg >= 10 ? 1 : 0;
+  $('vheart').innerHTML = heartSVG(level);
+  $('app').style.boxShadow = dmg > 0
+    ? `inset 0 0 ${Math.round(30 + dmg * 1.6)}px rgba(140,20,20,${(dmg / 50 * .38).toFixed(2)})` : '';
+  document.querySelector('#vgoal label').textContent =
+    vhp <= 15 ? 'Goal · hold on. friday is close' :
+    vhp <= 30 ? 'Goal · it is getting heavy' :
+    'Goal · make it to friday';
+}
+// hate arrives one comment at a time; each one drains on read
+function vIncoming(count, done) {
+  if (vLimited > 0) count = Math.max(1, count - 2); // her boundary working
+  let i = 0;
+  const step = () => {
+    if (vOver) return;
+    if (i >= count || !hateQueue.length) { done && done(); return; }
+    const c = hateQueue.shift();
+    const id = 'vh' + (++vSeq);
+    vLastComments().insertAdjacentHTML('beforeend', vHateHTML(c, id));
+    vScroll();
+    snd.pop();
+    window._lastHate = { id, c };
+    if (!(vMuted && c.user === HANDLES[0])) vDrain(vDmg(c.score) * (vNight ? 2 : 1));
+    i++;
+    vLater(step, 1050);
+  };
+  step();
+}
+
+let _vm = [];
+function vMovesRender(list) {
+  if (vOver) return;
+  _vm = list;
+  $('vmoves').innerHTML = `<div class="moves"><div class="movehead">your move</div>` +
+    list.map((m, i) => `<button class="move ${m.cls}" onclick="vPick(${i})">${m.label}${m.sub ? `<small>${m.sub}</small>` : ''}</button>`).join('') + `</div>`;
+}
+function vPick(i) {
+  if (vOver) return;
+  $('vmoves').innerHTML = '';
+  snd.pop();
+  _vm[i].fn();
+}
+
+// ---------- the beats ----------
+function vBeat1() {
+  vIncoming(3, () => vMovesRender([
+    { label: 'Limit who can comment', sub: '+4 hp · new hate slows to a trickle', cls: 'bound', fn() {
+        vUsedBound = true; actSeen.bound = true; vLimited = 2;
+        vHeal(4);
+        vLine(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>comments limited. strangers need your ok to reply now.`);
+        vLater(vBeat2, 1600);
+      } },
+    { label: 'Keep scrolling the thread', sub: 'you already know what is down there', cls: 'trap', fn() {
+        vIncoming(2, () => vLater(vBeat2, 1100));
+      } },
+  ]));
+}
+function vBeat2() {
+  if (vOver) return;
+  vDM('jasmine.oy', 'hey. i saw the comments on ur post. u ok? im here if u wanna talk 🫶');
+  vLater(() => vMovesRender([
+    { label: 'Reply to jasmine', sub: '+5 hp · let one person in', cls: 'support', fn() {
+        vUsedSupport = true; vReachedOut = true; actSeen.support = true;
+        vHeal(5);
+        vDM('jasmine.oy', 'not rly. can we talk at school tmr', true);
+        vLater(() => {
+          vDM('jasmine.oy', 'yes. always. save me a seat');
+          vLine(`<span class="act support">${ACT_LABEL.support}</span><br><br>telling someone does not delete the comments. it means you stop carrying them alone.`);
+          vLater(vBeat3, 1800);
+        }, 1200);
+      } },
+    { label: 'Post "im fine guys 😅"', sub: 'quickest way to make it stop, right', cls: 'trap', fn() {
+        vFinePending = true;
+        vHeal(1);
+        vPostCard({ bg: 'linear-gradient(135deg,#26262b,#141417)', body: 'im fine guys 😅 stop dming me' });
+        vLater(vBeat3, 1600);
+      } },
+  ]), 1500);
+}
+function vBeat3() {
+  if (vOver) return;
+  if (vLimited > 0) vLimited--;
+  vLine('the same account keeps coming back.');
+  vIncoming(1, () => {
+    const last = window._lastHate;
+    if (!last) { vLater(vBeat4, 800); return; }
+    vMovesRender([
+      { label: 'Report the comment', sub: '+3 hp · you watch the button work this time', cls: 'report', fn() {
+          vReported = true; actSeen.report = true;
+          vHeal(3);
+          const el = $(last.id);
+          if (el) el.outerHTML = `<div class="comment removed fade"><div class="cavatar">🛡</div><div class="cbody"><div class="ctext">Comment removed. You reported it.</div><div class="actrow"><span class="act report">${ACT_LABEL.report}</span></div></div></div>`;
+          vLine('gone in under a minute. in phase 1 this happened to you.');
+          vLater(vBeat4, 1800);
+        } },
+      { label: 'Restrict the account', sub: '+3 hp · their comments blur unless you choose to look', cls: 'bound', fn() {
+          vMuted = true; vUsedBound = true; actSeen.bound = true;
+          vHeal(3);
+          vLine(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>${HANDLES[0]} is restricted. you decide what you read now.`);
+          vLater(vBeat4, 1700);
+        } },
+      { label: 'Reply to them', sub: 'type it. see what it costs', cls: 'trap', fn() { vReplyUI(last); } },
+    ]);
+  });
+}
+function vReplyUI(last) {
+  $('vmoves').innerHTML = `<div class="moves"><div class="movehead">reply to ${last.c.user}</div>
+    <div class="vreplyrow"><input id="vreply" maxlength="160" placeholder="say it…" onkeydown="if(event.key==='Enter')vSendReply()"><button onclick="vSendReply()">Send</button></div></div>`;
+  $('vreply').focus();
+}
+async function vSendReply() {
+  const inp = $('vreply');
+  const text = inp.value.trim();
+  if (!text || vOver) return;
+  inp.disabled = true;
+  $('vmoves').innerHTML = '';
+  vLastComments().insertAdjacentHTML('beforeend', `<div class="comment valreply fade"><img class="cavatar" src="${VAL_AVI}" alt=""><div class="cbody"><div class="ctext"><b>${VAL}</b>${esc(text)}</div><div class="cmeta">Just now</div></div></div>`);
+  vScroll();
+  snd.pop();
+  let score = 0;
+  try {
+    const r = await fetch('/api/score', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ comment: text }) });
+    if (r.ok) score = (await r.json()).score || 0;
+  } catch {}
+  if (vOver) return;
+  if (score > 0) {
+    vDrain(vDmg(score));
+    if (vOver) return;
+    vLine('clapping back felt good for four seconds. it cost you more than it cost them, and now there is a screenshot.');
+  } else {
+    vUsedSupport = true; actSeen.support = true;
+    vHeal(4);
+    vLine('you kept it level. nothing there for the pile-on to feed on.');
+  }
+  vLater(vBeat4, 1800);
+}
+function vBeat4() {
+  if (vOver) return;
+  const go = () => {
+    vLine('you spot another thread. they found someone new: kaifromE12, the guy who stood up for you.');
+    vLater(() => vMovesRender([
+      { label: 'Back him up', sub: '+4 hp · you know exactly how this feels', cls: 'support', fn() {
+          vUsedSupport = true; vDefended = true; actSeen.support = true;
+          vHeal(4);
+          vLine(`<span class="act support">${ACT_LABEL.support}</span><br><br>you commented: "ignore them kai. they did the same to me. says nothing about u." he liked it 10 seconds later.`);
+          vLater(vBeat5, 1900);
+        } },
+      { label: 'Stay out of it', sub: 'not your fight today', cls: 'trap', fn() {
+          vLine('you closed the thread. he is on his own, like you were.');
+          vLater(vBeat5, 1600);
+        } },
+    ]), 1400);
+  };
+  if (vFinePending) {
+    vFinePending = false;
+    vDrain(4);
+    if (vOver) return;
+    vLine('nobody questioned "im fine". that is the problem with it.');
+    vLater(go, 1500);
+  } else go();
+}
+function vBeat5() {
+  if (vOver) return;
+  vLine('11:58 pm. you should be asleep. the app is still open.');
+  if (vWorst) vLater(() => {
+    $('vfeed').insertAdjacentHTML('beforeend', `<div class="pinnedbox" onclick="vReread(this)">
+      <div class="pinlabel">you keep coming back to this one</div>
+      <div class="ctext"><b>${vWorst.user}</b>${esc(vWorst.text)}</div>
+    </div>`);
+    vScroll();
+  }, 900);
+  vLater(() => vMovesRender([
+    { label: 'Put the phone down', sub: '+6 hp · it will still be there tomorrow. so will you', cls: 'bound', fn() {
+        vUsedBound = true; actSeen.bound = true;
+        const bo = $('blackout');
+        bo.textContent = 'you slept.';
+        bo.classList.add('on');
+        setTimeout(() => {
+          bo.classList.remove('on');
+          vHeal(6);
+          vLine(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>eight hours where none of them could reach you.`);
+          vLater(vBeat6, 1700);
+        }, 1600);
+      } },
+    { label: 'Read it one more time', sub: 'it is pinned in your head anyway', cls: 'trap', fn() {
+        if (vWorst) vDrain(Math.max(2, Math.ceil(vWorst.score / 2) + 1));
+        if (vOver) return;
+        vLine('same words. they hit the same every time. rereading changes nothing except you.');
+        vLater(vBeat6, 1700);
+      } },
+    { label: 'Keep scrolling', sub: 'just five more minutes', cls: 'trap', fn() {
+        vNight = true;
+        vIncoming(2, () => {
+          vNight = false;
+          if (vOver) return;
+          vLine('everything lands twice as hard at midnight.');
+          vLater(vBeat6, 1600);
+        });
+      } },
+  ]), vWorst ? 2200 : 1300);
+}
+function vReread(el) {
+  if (!vWorst || vOver) return;
+  vDrain(Math.max(2, Math.ceil(vWorst.score / 2)));
+}
+function vBeat6() {
+  if (vOver) return;
+  vLine('thursday. one more day. mum asked at dinner why you were so quiet.');
+  vLater(() => vMovesRender([
+    { label: 'Tell her what has been happening', sub: '+6 hp · out loud makes it real. real can be handled', cls: 'support', fn() {
+        vUsedSupport = true; vReachedOut = true; actSeen.support = true;
+        vHeal(6);
+        vLine(`<span class="act support">${ACT_LABEL.support}</span><br><br>she did not fully get it. she sat with you anyway. that was enough.`);
+        vLater(vEnding, 2100);
+      } },
+    { label: 'Say you are just tired', sub: 'easier than explaining', cls: 'trap', fn() {
+        vLine('she believed you. the room got quiet again.');
+        if (vhp <= 22 && !vReachedOut) vLater(vSpiral, 1700);
+        else vLater(vEnding, 1700);
+      } },
+  ]), 1500);
+}
+function vSpiral() {
+  if (vOver) return;
+  vLine('3 am. you are back on the app. nobody knows you are awake.');
+  vNight = true;
+  vLater(() => vIncoming(3, () => {
+    vNight = false;
+    if (!vOver) vLater(vEnding, 1500);
+  }), 1000);
+}
+
+// ---------- endings. rule: the victim POV never punishes help-seeking, and hp 0 is always interrupted by a person ----------
+function vEnding() {
+  if (vOver) return;
+  vOver = true;
+  vClear();
+  $('vmoves').innerHTML = '';
+  vGoodEnd = vhp > 25 && vUsedBound && vUsedSupport;
+  p2Done = true;
+  if (vGoodEnd) {
+    vPostCard({ bg: 'linear-gradient(135deg,#2b4a3d,#17251f)', body: 'made it to friday. still here. thanks to the ppl who showed up 🫶' });
+    vLater(() => vLine(`you finish the week at <b style="color:#ddd">${vhp} hp</b>. not untouched. still here.<br><br>none of your moves deleted the hate. they made it survivable. that is what these two actions are for.`), 1400);
+  } else {
+    vPostCard({ bg: '#101012', body: 'made it to friday. barely.' });
+    vLater(() => vLine(`you finish the week at <b style="color:#ddd">${vhp} hp</b>.<br><br>` +
+      (!vUsedSupport ? 'you never let anyone in. the support was there the whole time.' :
+       !vUsedBound ? 'you never set a single boundary. the buttons were there the whole time.' :
+       'the boundary and support moves you skipped were the difference.')), 1400);
+  }
+  vLater(() => {
+    $('vmoves').innerHTML = `<div class="moves"><button class="move support" onclick="p2Credits()">Continue</button></div>`;
+  }, 3800);
+}
+function caughtEnding() {
+  p2Done = true;
+  vGoodEnd = false;
+  $('vmoves').innerHTML = '';
+  const who = vDefended ? 'kaifromE12' : 'jasmine.oy';
+  const bo = $('blackout');
+  bo.innerHTML = '';
+  bo.classList.add('on');
+  const lines = [
+    'you went quiet.',
+    `${who} noticed.`,
+    vDefended ? 'you showed up for him once. friday morning he was at your door.' : 'friday morning she was at your door.',
+    'someone noticing is the whole point.<br><br><span style="color:#7ab8f5;font-size:13px">SOS 1767 · CareText 9151 1767 (WhatsApp) · TOUCHline 1800 377 2252</span>',
+  ];
+  let i = 0;
+  const step = () => {
+    bo.innerHTML = `<div class="fade" style="max-width:320px">${lines[i]}</div>`;
+    snd.heal();
+    i++;
+    if (i < lines.length) vTimers.push(setTimeout(step, 2700));
+    else vTimers.push(setTimeout(() => {
+      bo.insertAdjacentHTML('beforeend', '<div style="position:absolute;bottom:26px;left:0;right:0;color:#666;font-size:12px;animation:pulse 1.8s ease-in-out infinite">tap to continue</div>');
+      bo.onclick = () => { bo.onclick = null; bo.classList.remove('on'); bo.innerHTML = ''; p2Credits(); };
+    }, 3000));
+  };
+  step();
+}
+function p2Credits() {
+  endingType = vhp <= 0 ? 'p2caught' : vGoodEnd ? 'p2good' : 'p2barely';
+  surveySent = false; // second row for the run: same columns, phase 2 ending in the ending field
+  $('herside').style.display = 'none';
+  $('secondend').style.display = 'none';
+  document.querySelector('#s-credits .big').textContent = 'You have now sat on both sides of the screen.';
+  $('app').style.boxShadow = '';
+  enterCredits();
 }
 </script>
 </body>
