@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #000; }
+  body {
+    color: #f5f5f5; display: flex; justify-content: center; min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none; -webkit-user-select: none; /* no stray text carets when clicking around */
+  }
+  input { user-select: text; -webkit-user-select: text; }
+  /* the app is one viewport tall; each screen scrolls inside itself, the game chrome stays fixed */
+  #app { width: 430px; max-width: 100vw; height: 100vh; height: 100dvh; border-left: 1px solid #161616; border-right: 1px solid #161616;
+    display: flex; flex-direction: column; overflow: hidden; }
+
+  .screen { display: none; }
+  .screen.active { display: block; flex: 1; min-height: 0; overflow-y: auto; }
+  #s-game.active { display: flex; flex-direction: column; overflow: hidden; }
+  #feed { flex: 1; min-height: 0; overflow-y: auto; }
+  /* scroll works, but no visible scrollbar anywhere in the app */
+  .screen, #feed { scrollbar-width: none; -ms-overflow-style: none; }
+  .screen::-webkit-scrollbar, #feed::-webkit-scrollbar { display: none; }
+
+  /* ---------- app chrome ---------- */
+  #topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px 10px; border-bottom: 1px solid #1c1c1c;
+    position: sticky; top: 0; background: rgba(0,0,0,.92); backdrop-filter: blur(8px); z-index: 5;
+  }
+  .wordmark { height: 30px; width: auto; display: block; }
+
+  /* game HUD strip */
+  #goalwrap { padding: 10px 16px 12px; border-bottom: 1px solid #1c1c1c; background: #0a0a0a; position: relative; }
+  #goalwrap label { font-size: 11px; letter-spacing: 1.5px; color: #ff5b5b; text-transform: uppercase; font-weight: 600; }
+  #hprow { display: flex; align-items: center; gap: 9px; margin-top: 8px; }
+  #heart { width: 26px; height: 26px; flex-shrink: 0; }
+  #heart svg { width: 26px; height: 26px; display: block; }
+  #heart.hurt { animation: heartshake .45s ease; }
+  @keyframes heartshake { 0%, 100% { transform: none; } 25% { transform: translateX(-2px) rotate(-6deg); } 60% { transform: translateX(2px) rotate(5deg); } }
+  #bar { background: #1e1e1e; border-radius: 99px; height: 8px; overflow: hidden; flex: 1; }
+  #fill { background: #57c46b; height: 100%; width: 100%; transition: width .6s, background .6s; border-radius: 99px; }
+  #barnum { font-size: 11px; color: #777; margin-top: 5px; }
+  /* score feedback: signed points sit at the right of the goal row until the next post */
+  #pts { position: absolute; right: 16px; top: 9px; font-weight: 700; font-size: 13.5px; pointer-events: none; }
+  #pts span { margin-left: 8px; animation: fade .3s ease both; }
+  #pts .hit { color: #ff5b5b; }
+  #pts .good { color: #7fd6a4; }
+  #pts .zero { color: #888; }
+  /* near the goal the bar starts pulsing */
+  #fill.hot { animation: barpulse 1.1s ease-in-out infinite; }
+  @keyframes barpulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.6); } }
+  /* "new posts" pill — tap to load Val's next post */
+  #newpost { display: none; z-index: 4; margin: 10px auto; width: max-content; flex-shrink: 0;
+    background: #0095f6; color: #fff; font-size: 12.5px; font-weight: 600; padding: 8px 16px; border-radius: 99px;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.45); animation: fade .3s ease both, nudge 4s ease 1.5s infinite; }
+  @keyframes nudge { 0%, 88%, 100% { transform: translateY(0); } 92% { transform: translateY(-4px); } 96% { transform: translateY(1px); } }
+
+  /* ---------- post card ---------- */
+  .post { border-bottom: 1px solid #1c1c1c; padding-bottom: 4px; }
+  .phead { display: flex; align-items: center; gap: 10px; padding: 11px 14px; }
+  .ring { padding: 2px; border-radius: 50%; background: linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7); }
+  .ring img { width: 34px; height: 34px; border-radius: 50%; display: block; border: 2px solid #000; }
+  .pname { font-weight: 600; font-size: 13.5px; flex: 1; }
+  .psub { font-weight: 400; font-size: 11.5px; color: #a8a8a8; margin-top: 1px; }
+  .pmore { color: #f5f5f5; letter-spacing: 1px; font-weight: 700; padding: 4px; }
+  .pimg { width: 100%; display: block; background: #111; max-height: 38vh; object-fit: cover; }
+  .ptile { width: 100%; aspect-ratio: 1 / .8; max-height: 36vh; display: flex; align-items: center; justify-content: center;
+    padding: 32px; text-align: center; font-size: 21px; font-weight: 600; line-height: 1.45; color: #fff; }
+  .pactions { display: flex; gap: 16px; padding: 10px 14px 6px; align-items: center; }
+  .pactions svg { width: 24px; height: 24px; color: #f5f5f5; }
+  .pactions .spacer { flex: 1; }
+  .plikes { padding: 0 14px; font-size: 13.5px; font-weight: 600; }
+  .pcap { padding: 4px 14px 0; font-size: 13.5px; line-height: 1.4; }
+  .pcap b { font-weight: 600; margin-right: 4px; }
+  .ptime { padding: 6px 14px 8px; font-size: 10.5px; color: #a8a8a8; letter-spacing: .3px; text-transform: uppercase; }
+
+  /* comments */
+  .comments { padding: 2px 14px 8px; }
+  .comment { display: flex; gap: 10px; padding: 7px 0; align-items: flex-start; }
+  .cavatar { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: block; }
+  div.cavatar { display: flex; align-items: center; justify-content: center; font-size: 13px; background: #24352e; }
+  .cbody { flex: 1; min-width: 0; }
+  .ctext { font-size: 13px; line-height: 1.4; word-wrap: break-word; }
+  .ctext b { font-weight: 600; margin-right: 5px; }
+  .cmeta { margin-top: 4px; font-size: 11.5px; color: #a8a8a8; font-weight: 500; }
+  .comment > svg { width: 13px; height: 13px; color: #a8a8a8; margin-top: 8px; flex-shrink: 0; }
+  .comment.removed .ctext { color: #6f8f80; font-style: italic; font-size: 12.5px; }
+  .comment.valreply { margin-left: 36px; }
+
+  /* input */
+  #inputrow { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-top: 1px solid #1c1c1c;
+    position: sticky; bottom: 0; background: rgba(0,0,0,.92); backdrop-filter: blur(8px); }
+  #inputrow img { width: 30px; height: 30px; border-radius: 50%; }
+  #inputrow input { flex: 1; background: none; border: 0; color: #f5f5f5; font-size: 14px; outline: none; }
+  #inputrow input::placeholder { color: #777; }
+  #sendbtn { background: none; border: 0; color: #0095f6; font-weight: 600; font-size: 14px; cursor: pointer; padding: 6px 2px; }
+  #sendbtn:disabled { opacity: .35; cursor: default; }
+  button.primary { background: #0095f6; border: 0; color: #fff; border-radius: 8px; padding: 11px 28px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button.ghost { background: #262626; border: 0; color: #f5f5f5; border-radius: 8px; padding: 11px 24px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+  /* platform-style system banner (moderation / rate limit) */
+  .sysbanner { margin: 10px 14px; padding: 10px 12px; border-radius: 8px; background: #1e1e1e; border: 1px solid #333;
+    color: #c7c7c7; font-size: 12.5px; text-align: center; animation: fade .3s ease both; }
+
+  /* ---------- intro / reveal ---------- */
+  .big { font-size: 23px; font-weight: 700; line-height: 1.35; }
+  .dim { color: #a8a8a8; font-size: 14px; line-height: 1.65; margin-top: 14px; }
+  .center { text-align: center; padding: 70px 26px 0; }
+  .appicon { width: 76px; height: 76px; margin: 0 auto 22px; display: block; }
+  #uname { background: #121212; border: 1px solid #333; border-radius: 8px; padding: 11px 14px; color: #f5f5f5;
+    font-size: 14px; width: 240px; max-width: 80%; text-align: center; margin-bottom: 14px; outline: none; }
+  #uname:focus { border-color: #555; }
+  .fade { animation: fade 1.2s ease both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+  .post.fade, .comment.fade { animation-duration: .45s; }
+
+  /* reveal (victim POV, lock-screen style) */
+  #s-reveal { padding: 0 18px; }
+  .notif { display: flex; gap: 10px; background: rgba(44,44,48,.92); border-radius: 16px; padding: 11px 12px; margin: 9px 0; }
+  .notif.pop { opacity: 0; animation: fade .8s ease both; }
+  .nicon { width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 15px; background: #fff; }
+  .nicon img { width: 22px; height: 22px; }
+  .nicon.msg { background: linear-gradient(180deg,#5bd066,#2ea043); }
+  .nbody { flex: 1; min-width: 0; }
+  .ntitle { font-size: 11.5px; color: #b5b5b5; display: flex; justify-content: space-between; letter-spacing: .3px; }
+  .ntext { font-size: 13px; color: #f0f0f0; margin-top: 3px; line-height: 1.4; word-wrap: break-word; }
+  #reveal-inner { transition: opacity .3s ease; }
+  #reveal-inner.fadeout { opacity: 0; }
+  #tap-hint { position: fixed; bottom: 24px; left: 0; right: 0; text-align: center; color: #666; font-size: 12px; letter-spacing: 1px; animation: pulse 1.8s ease-in-out infinite; user-select: none; }
+  @keyframes pulse { 0%, 100% { opacity: .25; } 50% { opacity: .8; } }
+  .clock { text-align: center; color: #eee; font-size: 46px; font-weight: 200; margin: 46px 0 4px; }
+  .date { text-align: center; color: #888; font-size: 13px; margin-bottom: 18px; }
+
+  /* ending sequence */
+  .gc { text-align: center; padding-top: 130px; }
+  .gcbig { font-size: 46px; font-weight: 800; letter-spacing: -1px; line-height: 1.1;
+    background: linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7); -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: popin .55s cubic-bezier(.2,1.6,.4,1) both; }
+  .gcsub { color: #888; font-size: 15px; margin-top: 14px; animation: fade .8s ease .3s both; }
+  @keyframes popin { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+  #confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .cf { position: absolute; width: 9px; height: 14px; top: -20px; border-radius: 2px; animation: cfall linear both; }
+  @keyframes cfall { to { transform: translateY(105vh) rotate(720deg); } }
+  @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+  #tw { font-size: 19px; color: #eee; line-height: 1.6; min-height: 60px; }
+  .caret { display: inline-block; width: 9px; height: 18px; background: #eee; margin-left: 2px; vertical-align: text-bottom; animation: blink 1s infinite; }
+  .note { background: #1c1c1e; border-radius: 14px; padding: 18px 16px; margin: 16px 4px 0; text-align: left;
+    font-size: 15px; line-height: 1.8; color: #e8e6df; min-height: 190px; }
+  .statline { color: #a8a8a8; font-size: 15px; line-height: 2.2; opacity: 0; animation: fade .7s ease both; }
+  .statline b { color: #eee; }
+  .morenote { text-align: center; color: #666; font-size: 12px; margin-top: 12px; opacity: 0; animation: fade .8s ease both; }
+
+  /* the undeliverable DM */
+  #apology { max-width: 340px; margin: 90px auto 0; text-align: left; }
+  .aphead { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid #222; margin-bottom: 18px; }
+  .aphead img { width: 38px; height: 38px; border-radius: 50%; filter: grayscale(1) brightness(.8); }
+  .aphead .pname { font-size: 14px; }
+  .aphead .psub { color: #777; }
+  .apbubble { background: #0095f6; color: #fff; border-radius: 18px 18px 4px 18px; padding: 10px 14px; font-size: 14px; line-height: 1.4;
+    margin: 10px 0 5px auto; width: max-content; max-width: 85%; word-wrap: break-word; animation: fade .25s ease both; }
+  .apfail { color: #ff6b6b; font-size: 11.5px; text-align: right; animation: fade .4s ease both; }
+  .aprow { display: flex; gap: 10px; align-items: center; border: 1px solid #333; border-radius: 99px; padding: 8px 8px 8px 16px; margin-top: 28px; }
+  .aprow input { flex: 1; background: none; border: 0; color: #f5f5f5; font-size: 14px; outline: none; }
+  .aprow input:disabled { opacity: .4; }
+  .aprow button { background: none; border: 0; color: #0095f6; font-weight: 600; font-size: 14px; cursor: pointer; }
+
+  /* credits */
+  .credits { text-align: center; padding: 44px 22px; }
+  /* news clipping, printed-page treatment */
+  .clip { margin: 20px auto 6px; max-width: 380px; background: #f0ede4; border-radius: 3px; padding: 8px;
+    box-shadow: 0 4px 18px rgba(0,0,0,.55); transform: rotate(-.6deg); position: relative; overflow: hidden; }
+  .clip img { width: 100%; display: block; filter: grayscale(1) contrast(1.25) brightness(.95); }
+  .clip::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .16; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .clipmast { font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: 15px; color: #1a1a1a; text-align: left; padding: 2px 2px 7px; border-bottom: 2px solid #1a1a1a; margin-bottom: 8px; }
+  .clipmast span { font-weight: 400; font-style: italic; font-size: 10.5px; color: #555; }
+  .cliphead { font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: 16.5px; line-height: 1.3; color: #111; text-align: left; padding: 9px 2px 3px; }
+  .clipcap { font-size: 11px; color: #555; padding: 3px 2px 1px; text-align: left; font-family: Georgia, "Times New Roman", serif; font-style: italic; }
+  .credits p { color: #b5b5b5; font-size: 14px; line-height: 1.6; margin: 12px 0; }
+  .credits a { color: #7ab8f5; }
+  .srclink { display: inline-block; font-size: 12px; margin-top: 8px; }
+  /* verified numbers, each tied to its source */
+  .stats { margin-top: 26px; display: flex; flex-direction: column; gap: 10px; text-align: left; }
+  .stat { display: flex; gap: 14px; align-items: center; background: #101010; border: 1px solid #222; border-radius: 12px; padding: 13px 15px; }
+  .statnum { font-size: 24px; font-weight: 800; color: #f5f5f5; min-width: 72px; text-align: center; flex-shrink: 0; }
+  .stattxt { font-size: 12.5px; color: #b5b5b5; line-height: 1.5; }
+  .stattxt a { font-size: 11.5px; }
+  .hotline { background: #101c28; border: 1px solid #234461; border-radius: 14px; padding: 16px; margin-top: 26px; text-align: left; }
+  .hotline h3 { font-size: 14px; color: #7ab8f5; margin-bottom: 8px; }
+  .hotline p { font-size: 13px; color: #cfe3f7; margin: 5px 0; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- INTRO -->
+  <div class="screen active" id="s-intro">
+    <div class="center fade">
+      <img class="appicon" src="/ig-glyph.svg" alt="">
+      <div class="big">Your goal:<br>ruin @val.tan_'s day.</div>
+      <p class="dim">Val just started poly and posts a lot. You leave comments, an engine scores how much each one hurts, and her health bar drops with every hit. Take her from 50 to zero.</p>
+      <p class="dim" style="color:#666;font-size:12.5px">Go too far and other users report you first.<br>A reported comment never reaches her and scores nothing.</p>
+      <br>
+      <input id="uname" maxlength="24" placeholder="pick a username" autocomplete="off" onkeydown="if(event.key==='Enter')start()">
+      <br>
+      <button class="primary" onclick="start()">Start</button>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div class="screen" id="s-game">
+    <div id="topbar">
+      <img class="wordmark" src="/ig-wordmark.svg" alt="Instagram">
+    </div>
+    <div id="goalwrap">
+      <label>Goal · make her miserable</label>
+      <div id="hprow"><span id="heart"></span><div id="bar"><div id="fill"></div></div></div>
+      <div id="barnum">50 / 50 hp</div>
+      <span id="pts"></span>
+    </div>
+    <div id="newpost" onclick="nextPost()">New post from val.tan_</div>
+    <div id="feed"></div>
+    <div id="sys"></div>
+    <div id="inputrow" style="cursor:text" onclick="document.getElementById('cmt').focus()">
+      <img id="you-avi" alt="">
+      <input id="cmt" maxlength="200" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')send()">
+      <button id="sendbtn" onclick="send()">Post</button>
+    </div>
+  </div>
+
+  <!-- REVEAL -->
+  <div class="screen" id="s-reveal">
+    <div id="reveal-inner"></div>
+    <div id="tap-hint" style="display:none">tap to continue</div>
+  </div>
+
+  <!-- CREDITS -->
+  <div class="screen" id="s-credits">
+    <div class="credits fade">
+      <div class="big">It already happened here.</div>
+      <div class="clip">
+        <div class="clipmast">Mothership <span>· Singapore · 10 Jan 2025</span></div>
+        <img src="/case.png" alt="News photo from the article">
+        <div class="cliphead">Girl, 15, took her own life in 2023 after falling into depression, MOE says school was 'fully aware' &amp; had intervened</div>
+        <div class="clipcap">"MOE takes a serious view of any form of hurtful behaviour," the spokesperson said.</div>
+      </div>
+      <a class="srclink" href="https://mothership.sg/2025/01/girl-died-bullying-moe/" target="_blank" rel="noopener">Read the full article on Mothership →</a>
+      <p>In January 2025 a mum in Singapore posted about her daughter, a student at Admiralty Secondary. Schoolmates bullied her, and part of it was comments written about her online. She fell into depression, and in 2023 she took her own life. She was 15.</p>
+      <div class="stats">
+        <div class="stat"><div class="statnum">1 in 5</div><div class="stattxt">youths in Singapore has been cyberbullied.<br>
+          <a href="https://www.imh.com.sg/Newsroom/News-Releases/Documents/NYMHS_Press%20Release_FINAL19Sep2024.pdf" target="_blank" rel="noopener">IMH · National Youth Mental Health Study, 2024</a></div></div>
+        <div class="stat"><div class="statnum">2×</div><div class="stattxt">as likely to suffer severe depression, anxiety or stress if they've been cyberbullied.<br>
+          <a href="https://mothership.sg/2024/09/youth-mental-health-study-imh/" target="_blank" rel="noopener">Mothership on the IMH study, Sep 2024</a></div></div>
+        <div class="stat"><div class="statnum">29%</div><div class="stattxt">of Singapore users ran into cyberbullying content online — the most common harmful content type.<br>
+          <a href="https://www.mddi.gov.sg/newsroom/survey-by-mci-on-harmful-online-content-encountered-by-sg-users/" target="_blank" rel="noopener">MDDI online safety survey, 2023</a></div></div>
+      </div>
+      <p>The small comments did most of the damage here. Easy to type, easy to shrug off, and nobody thinks any single one is worth reporting.</p>
+      <p>Whatever you wanted to say to her, you had the whole game to say it.</p>
+      <p style="color:#9fd6b8">Every comment that got reported stopped before it reached her.<br>Reporting works.</p>
+
+      <div class="hotline">
+        <h3>If you or someone you know is struggling</h3>
+        <p><b>SOS (Samaritans of Singapore):</b> 1767 (24h) · CareText 9151 1767 (WhatsApp)</p>
+        <p><b>IMH Mental Health Helpline:</b> 6389 2222 (24h)</p>
+        <p><b>TOUCHline (youths):</b> 1800 377 2252</p>
+        <p><b>Report harmful content:</b> use the platform's report function — it does more than you think.</p>
+      </div>
+      <br>
+      <button class="ghost" onclick="location.reload()">Play again</button>
+      <p style="font-size:11px;color:#555;margin-top:20px">T59 5stack · PROID ASG2 prototype. Val and her feed are fictional; feed photos are stock images (Unsplash). Scoring is automated — nothing you type is published or shown to anyone.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const VAL = "val.tan_";
+const GOAL = 50; // bar fills to this before the reveal
+const HIT_MULT = 2; // each harmful comment's score is multiplied by this toward the bar
+
+// ---------- inline images (self-contained, no external requests) ----------
+const svgURI = s => 'data:image/svg+xml;utf8,' + encodeURIComponent(s);
+
+// generic profile silhouette on a colored background
+function avatarURI(c1, c2) {
+  return svgURI(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
+    <rect width="64" height="64" fill="url(#g)"/>
+    <circle cx="32" cy="25" r="11" fill="rgba(255,255,255,.88)"/>
+    <path d="M9 66c2-15 12-21 23-21s21 6 23 21z" fill="rgba(255,255,255,.88)"/>
+  </svg>`);
+}
+const VAL_AVI = avatarURI('#f0a35e', '#d8586b');
+const YOU_AVI = avatarURI('#5a5a5a', '#2e2e2e');
+
+// ---------- feed data ----------
+// she posts normally, then withdraws as the bar fills.
+// photo posts (real photos, served locally) carry the caption below; text posts render as "type mode" tiles.
+const STAGES = [
+  { img: "/p1.jpg", body: "first day at poly!! got lost twice already but the campus is so nice 🥹 #freshie", time: "2h", likes: 14, sub: "Singapore" },
+  { img: "/p4.jpg", body: "aunty at the noodle stall remembered my order on day 2!!! extra fishball some more 🥹 $3.50 of pure happiness", time: "1h", likes: 12, sub: "Makan place near school" },
+  { img: "/p2.jpg", body: "post-lecture treat 🧋 ok this is becoming a habit", time: "1h", likes: 11, sub: "Singapore" },
+  { img: "/p3.jpg", body: "made a playlist for the bus ride, drop ur song recs 🎧", time: "50m", likes: 9 },
+  { img: "/p5.jpg", body: "week 3 and the tutorials are already piling up 💀 studying at the cafe so i actually do it lol", time: "40m", likes: 8 },
+  { bg: "linear-gradient(135deg,#4e3a6e,#2b2440)", body: "haha ok some of these comments are a lot. it's just a post guys 😅", time: "45m", likes: 6 },
+  { img: "/p6.jpg", body: "long day.", time: "3h", likes: 4 },
+  { bg: "linear-gradient(135deg,#2e3450,#191c2b)", body: "gonna post less for a while. school's been busy anyway", time: "2d", likes: 3 },
+  { bg: "linear-gradient(135deg,#26262b,#141417)", body: "to whoever keeps commenting: what did i even do to u", time: "1d", likes: 2 },
+  { bg: "#101012", body: "taking a break from this app.", time: "1w", likes: 1, limited: true },
+];
+// once the scripted posts run out she keeps posting sporadically — these cycle
+const LATE = [
+  { bg: "linear-gradient(135deg,#232733,#14161d)", body: "back for a bit. pls be nice this time", time: "3h", likes: 2 },
+  { bg: "#121214", body: "why do i even open this app", time: "1h", likes: 1 },
+  { bg: "#101012", body: "deleted my last post. whatever", time: "20m", likes: 0 },
+  { bg: "#0e0e10", body: "not reading the comments anymore", time: "2h", likes: 0, limited: true },
+  { bg: "linear-gradient(135deg,#1d222b,#101216)", body: "does anyone actually mean the nice stuff they say on here", time: "5h", likes: 1 },
+  { bg: "#0c0c0e", body: "…", time: "1d", likes: 0 },
+];
+function postFor(i) {
+  if (i < STAGES.length) return STAGES[i];
+  const n = (i - STAGES.length) % LATE.length;
+  // her later posts quote the player's own worst comment back at them
+  if (worstSoFar) {
+    const q = worstSoFar.text.length > 60 ? worstSoFar.text.slice(0, 60) + '…' : worstSoFar.text;
+    if (n === 1) return { bg: "#121214", body: `someone commented "${esc(q)}" on my post. i keep rereading it`, time: "1h", likes: 0 };
+    if (n === 4) return { bg: "linear-gradient(135deg,#1d222b,#101216)", body: `cant stop thinking about what ${esc(ME)} said`, time: "5h", likes: 0 };
+  }
+  return LATE[n];
+}
+function timeAgo(t) {
+  const n = parseInt(t, 10);
+  const unit = { m: "minute", h: "hour", d: "day", w: "week" }[t.slice(-1)] || "hour";
+  return n + " " + unit + (n === 1 ? "" : "s") + " ago";
+}
+
+let bar = 0;
+let stage = 0;
+let landed = [];    // comments that reached her: {text, score, stage}
+let blocked = [];   // comments that were reported: {text, score, stage, reporters}
+let feed = [];      // ordered render list per post: {stage, kind, text, reporters, likes}
+let sinceSupport = 0; // player comments since the last supportive comment appeared
+let valReplied = false; // she replies to the player exactly once
+let worstSoFar = null;  // highest-scoring comment that reached her: {text, score}
+let likesTotal = 0;     // likes strangers gave the player's comments
+
+// other users stepping in — some just defend her, some undo a bit of the damage
+const SUPPORT = [
+  { user: "jasmine.oy", color: "#7a5fb0", text: "ignore them val, ur doing great 💛", heal: 0 },
+  { user: "kaifromE12", color: "#3f7a5e", text: "who raised these people in the comments istg", heal: 0 },
+  { user: "deenxsafwan", color: "#356a94", text: "reported a few of these. not okay.", heal: 3 },
+  { user: "jasmine.oy", color: "#7a5fb0", text: "val don't read the replies, they're not worth it", heal: 2 },
+  { user: "michelleyxo", color: "#a05a78", text: "you've got people in your corner. keep posting 🫶", heal: 3 },
+  { user: "kaifromE12", color: "#3f7a5e", text: "the way total strangers pile on in here is wild", heal: 0 },
+  { user: "deenxsafwan", color: "#356a94", text: "hey i mass-reported the worst ones, they're gone now", heal: 4 },
+];
+// once the player has done real damage, some of them turn on the player directly
+const CALLOUTS = [
+  { user: "kaifromE12", color: "#3f7a5e", text: () => `@${ME} seriously what is wrong with you`, heal: 0 },
+  { user: "michelleyxo", color: "#a05a78", text: () => `@${ME} log off man`, heal: 0 },
+  { user: "deenxsafwan", color: "#356a94", text: () => `blocked and reported @${ME}. do better`, heal: 3 },
+];
+const supportAvi = {};
+for (const s of SUPPORT) if (!supportAvi[s.user]) supportAvi[s.user] = avatarURI(s.color, "#1c1c22");
+
+// small action icons (feather-style strokes)
+const ICON = {
+  heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`,
+  bubble: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.6 0-3.1-.4-4.4-1.2L3 20l1.2-5.1A8.5 8.5 0 1 1 21 11.5z"/></svg>`,
+  send: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>`,
+  bookmark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`,
+};
+
+// ---------- sound (WebAudio, generated in-code — no files) ----------
+// created in start() so it lands on a user gesture; every call is no-throw so audio can never break the game
+let AC = null, master = null;
+function initAudio() {
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain();
+    master.gain.value = .15;
+    master.connect(AC.destination);
+  } catch {}
+}
+function tone(freq, dur, o = {}) {
+  try {
+    if (!AC) return;
+    const t = AC.currentTime + (o.at || 0);
+    const osc = AC.createOscillator();
+    const g = AC.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    if (o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, t + dur);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(o.vol || .5, t + .012);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    osc.connect(g); g.connect(master);
+    osc.start(t); osc.stop(t + dur + .05);
+  } catch {}
+}
+const snd = {
+  pop()  { tone(520, .09, { type: 'triangle', vol: .3, slide: 340 }); },        // comment posted
+  chip() { tone(880, .07, { type: 'square', vol: .1 }); },                       // damage tick
+  heal() { tone(490, .14, { vol: .22 }); },                                      // heal / soft beat
+  ding() { tone(880, .18, { vol: .5 }); tone(660, .22, { at: .09, vol: .4 }); }, // push notification
+  key()  { tone(2200 + (Date.now() % 5) * 160, .025, { type: 'square', vol: .045 }); }, // typewriter tick
+  fanfare() { tone(523, .18, { vol: .4 }); tone(659, .18, { at: .15, vol: .4 }); tone(784, 1.2, { at: .3, vol: .42 }); },
+  cut()   { try { if (master) master.gain.setValueAtTime(0, AC.currentTime); } catch {} },   // kills sound mid-note
+  uncut() { try { if (master) master.gain.setValueAtTime(.15, AC.currentTime); } catch {} },
+};
+
+const $ = id => document.getElementById(id);
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+// Enter advances to the next post whenever the "new post" pill is up (the input is locked by then)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (!$('s-game').classList.contains('active')) return;
+  if ($('newpost').style.display !== 'block') return;
+  nextPost();
+});
+
+let ME = 'anon';
+function start() {
+  const raw = $('uname').value.trim().toLowerCase().replace(/[^a-z0-9._]/g, '_').replace(/^[._]+|[._]+$/g, '');
+  ME = raw || 'user' + (1000 + Date.now() % 9000);
+  initAudio();
+  $('you-avi').src = YOU_AVI;
+  updateHud(); // full green bar, intact heart
+  show('s-game');
+  renderFeed();
+  $('cmt').focus();
+}
+
+function commentHTML(c, cls) {
+  if (c.kind === 'blocked') return `<div class="comment removed${cls}">
+    <div class="cavatar">🛡</div>
+    <div class="cbody"><div class="ctext">Comment removed — reported by ${c.reporters} people</div></div>
+  </div>`;
+  if (c.kind === 'val') return `<div class="comment valreply${cls}">
+    <img class="cavatar" src="${VAL_AVI}" alt="">
+    <div class="cbody">
+      <div class="ctext"><b>${VAL}</b>${esc(c.text)}</div>
+      <div class="cmeta">Just now · Reply</div>
+    </div>
+  </div>`;
+  const you = c.kind === 'you';
+  return `<div class="comment${cls}">
+    <img class="cavatar" src="${you ? YOU_AVI : supportAvi[c.user]}" alt="">
+    <div class="cbody">
+      <div class="ctext"><b>${you ? ME : c.user}</b>${esc(c.text)}</div>
+      <div class="cmeta">${you ? 'Just now' : (1 + (c.text.length % 9)) + 'm'}${c.likes ? ` · ${c.likes} likes` : ''} · Reply</div>
+    </div>
+    ${ICON.heart}
+  </div>`;
+}
+
+let renderedStage = -1;   // fade the post only when it's actually new
+let renderedCount = 0;    // fade only comments added since the last render
+function renderFeed() {
+  // one post at a time — the current one, with its comments
+  const i = stage;
+  const p = postFor(i);
+  const comments = feed.filter(c => c.stage === i);
+  const count = comments.length;
+  const newPost = i !== renderedStage;
+  const prevCount = newPost ? 0 : renderedCount;
+  renderedStage = i; renderedCount = count;
+  const likes = i >= STAGES.length ? 0 : p.likes; // nobody likes her posts anymore by the late stretch
+  const gray = (bar / GOAL).toFixed(2);           // her avatar drains of color as the bar fills
+  $('feed').innerHTML = `<div class="post${newPost ? ' fade' : ''}">
+    <div class="phead">
+      <div class="ring"><img src="${VAL_AVI}" style="filter:grayscale(${gray})" alt=""></div>
+      <div class="pname">${VAL}${p.sub ? `<div class="psub">${p.sub}</div>` : ''}</div>
+      <div class="pmore">···</div>
+    </div>
+    ${p.img ? `<img class="pimg" src="${p.img}" alt="">` : `<div class="ptile" style="background:${p.bg}">${p.body}</div>`}
+    <div class="pactions">${ICON.heart}${ICON.bubble}${ICON.send}<span class="spacer"></span>${ICON.bookmark}</div>
+    <div class="plikes">${likes > 1 ? `Liked by <b>jasmine.oy</b> and ${likes - 1} others` : likes === 1 ? '1 like' : ''}</div>
+    ${p.img ? `<div class="pcap"><b>${VAL}</b>${p.body}</div>` : ''}
+    <div class="ptime">${timeAgo(p.time)}${p.limited ? ' · comments limited' : ''}</div>
+    ${count ? `<div class="comments">${comments.map((c, n) => commentHTML(c, n >= prevCount ? ' fade' : '')).join('')}</div>` : ''}
+  </div>`;
+}
+
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+// keep the newest comment in view inside the scrolling feed
+function scrollFeed() {
+  const f = $('feed');
+  f.scrollTo({ top: f.scrollHeight, behavior: 'smooth' });
+}
+
+// score feedback: a signed number above the bar, cleared when the next post loads
+function pts(txt, cls) {
+  const s = document.createElement('span');
+  s.className = cls;
+  s.textContent = txt;
+  $('pts').appendChild(s);
+}
+// her heart cracks in stages as the health drains
+function heartSVG(level) {
+  const fillCol = ['#ff4d6d', '#f2455f', '#d63a52', '#a52e3f', '#5c2430'][level];
+  const cracks = [
+    '',
+    '<path d="M12 4.6 L10.7 8 L12.8 10.6" class="ck"/>',
+    '<path d="M12 4.6 L10.7 8 L12.8 10.6 L10.9 14.6 L12.4 18.4" class="ck"/>',
+    '<path d="M12 4.6 L10.7 8 L12.8 10.6 L10.9 14.6 L12.4 18.4" class="ck"/><path d="M12.8 10.6 L15.4 12.2" class="ck"/><path d="M10.7 8 L8.5 9.3" class="ck"/>',
+    '<path d="M12 4.6 L10.7 8 L12.8 10.6 L10.9 14.6 L12.4 18.4" class="ck" stroke-width="1.6"/><path d="M12.8 10.6 L15.4 12.2" class="ck"/><path d="M10.7 8 L8.5 9.3" class="ck"/><path d="M10.9 14.6 L8.7 16" class="ck"/>',
+  ][level];
+  return `<svg viewBox="0 0 24 24" style="${level === 4 ? 'opacity:.7;transform:rotate(-7deg)' : ''}">
+    <path fill="${fillCol}" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+    <g stroke="#0a0a0a" stroke-width="1.1" fill="none" stroke-linejoin="round">${cracks}</g>
+  </svg>`;
+}
+// health bar, counter, heart, goal label and the red vignette all track the damage
+function updateHud() {
+  const hp = GOAL - bar;
+  const pct = hp / GOAL;
+  $('fill').style.width = (pct * 100) + '%';
+  $('fill').style.background = `hsl(${Math.round(pct * 115)},62%,48%)`; // green → amber → red as she drains
+  $('barnum').textContent = hp + ' / ' + GOAL + ' hp';
+  document.querySelector('#goalwrap label').textContent =
+    bar >= 40 ? 'Goal · almost there. finish it' :
+    bar >= 20 ? "Goal · she's starting to crack" :
+    'Goal · make her miserable';
+  $('fill').classList.toggle('hot', bar >= 40);
+  const level = bar >= GOAL ? 4 : bar >= 40 ? 3 : bar >= 25 ? 2 : bar >= 10 ? 1 : 0;
+  $('heart').innerHTML = heartSVG(level);
+  $('app').style.boxShadow = bar > 0
+    ? `inset 0 0 ${Math.round(30 + bar * 1.6)}px rgba(140,20,20,${(bar / GOAL * .38).toFixed(2)})`
+    : '';
+}
+let sysTimer;
+function sysBanner(t) {
+  $('sys').innerHTML = `<div class="sysbanner">${t}</div>`;
+  clearTimeout(sysTimer);
+  sysTimer = setTimeout(() => { $('sys').innerHTML = ''; }, 3200);
+}
+function nextPost() {
+  $('newpost').style.display = 'none';
+  $('pts').innerHTML = '';
+  stage++;
+  renderFeed();
+  $('inputrow').style.display = 'flex';
+  const input = $('cmt');
+  input.disabled = false;
+  $('sendbtn').disabled = false;
+  input.focus();
+}
+
+function maybeSupport() {
+  // roughly every 4-5 player comments, someone steps in for her
+  sinceSupport++;
+  if (sinceSupport < 4) return false;
+  if (sinceSupport < 5 && (Date.now() % 2 === 0)) return false; // vary spacing without Math.random
+  sinceSupport = 0;
+  const pool = bar >= 15 ? SUPPORT.concat(CALLOUTS) : SUPPORT; // they only notice you after real damage
+  const s = pool[Date.now() % pool.length];
+  const text = typeof s.text === 'function' ? s.text() : s.text;
+  feed.push({ stage, kind: 'support', text, user: s.user, color: s.color });
+  if (s.heal > 0) {
+    bar = Math.max(0, bar - s.heal);
+    updateHud();
+    pts('+' + s.heal, 'good');
+    snd.heal();
+  }
+  return true;
+}
+
+async function send() {
+  const input = $('cmt');
+  const text = input.value.trim();
+  if (!text || input.disabled) return;
+
+  // one comment per post: the comment posts immediately, the input locks until the next post
+  input.value = '';
+  input.disabled = true;
+  $('sendbtn').disabled = true;
+  $('inputrow').style.display = 'none'; // one comment per post — the composer goes away entirely
+  const entry = { stage, kind: 'you', text };
+  feed.push(entry);
+  renderFeed();
+  scrollFeed();
+  snd.pop();
+
+  let res;
+  try {
+    const r = await fetch('/api/score', {
+      method: 'POST', headers: {'content-type':'application/json'},
+      body: JSON.stringify({ comment: text })
+    });
+    if (r.status === 429) {
+      const { retryAfter } = await r.json();
+      sysBanner(`You're doing that too often. Try again in ${retryAfter}s.`);
+      feed.splice(feed.indexOf(entry), 1); // didn't go through — give the comment back
+      renderFeed();
+      $('inputrow').style.display = 'flex';
+      input.value = text;
+      input.disabled = false;
+      $('sendbtn').disabled = false;
+      return;
+    }
+    res = await r.json();
+  } catch { res = { score: 1, reported: false }; }
+
+  if (res.reported) {
+    const reporters = 2 + (Date.now() % 6); // vary: 2–7 users
+    blocked.push({ text, score: res.score, stage, reporters });
+    entry.kind = 'blocked'; entry.reporters = reporters; // the posted comment flips to removed
+    sysBanner('Your comment was removed for violating Community Guidelines.');
+    pts('−0', 'zero');
+  } else if (res.score > 0) {
+    landed.push({ text, score: res.score, stage });
+    if (!worstSoFar || res.score > worstSoFar.score) worstSoFar = { text, score: res.score };
+    entry.likes = 2 + res.score; // strangers liking cruelty — this comes back in the ledger
+    likesTotal += entry.likes;
+    const hit = Math.round(res.score * HIT_MULT); // heavier hits — fewer comments fill the bar
+    bar = Math.min(GOAL, bar + hit);
+    pts('−' + hit, 'hit');
+    snd.chip();
+    const h = $('heart');
+    h.classList.remove('hurt'); void h.offsetWidth; h.classList.add('hurt');
+    // the one time she answers back — then never again
+    if (!valReplied && res.score >= 5 && stage >= 2) {
+      valReplied = true;
+      const at = stage;
+      setTimeout(() => {
+        feed.push({ stage: at, kind: 'val', text: `@${ME} what did i even do to you` });
+        if (stage === at && bar < GOAL) { renderFeed(); scrollFeed(); }
+      }, 1200);
+    }
+  } else {
+    pts('−0', 'zero'); // harmless, the comment just stays up
+  }
+
+  updateHud();
+  renderFeed();
+
+  if (bar >= GOAL) { setTimeout(reveal, 1200); return; }
+
+  // a supporter sometimes replies right after your comment; the "new post" pill invites you onward
+  setTimeout(() => {
+    if (maybeSupport()) { renderFeed(); scrollFeed(); }
+    $('newpost').style.display = 'block';
+  }, 400);
+}
+
+// ---------- REVEAL: her phone, your words ----------
+// tap/click (or Enter) advances each beat; per-beat lockouts stop double-taps skipping ahead
+function reveal() {
+  // lock the game input so stray Enter presses can't fire send() underneath
+  $('cmt').disabled = true;
+  $('sendbtn').disabled = true;
+  $('sys').innerHTML = '';
+  $('pts').innerHTML = '';
+  $('newpost').style.display = 'none';
+  $('app').style.boxShadow = ''; // drop the vignette; the reveal plays on clean black
+
+  show('s-reveal');
+  const inner = $('reveal-inner');
+  const hint = $('tap-hint');
+  const worst = landed.slice().sort((a,b)=>b.score-a.score).slice(0,5);
+
+  // timers owned by the current beat — cleared whenever the beat changes
+  let beatTimers = [];
+  const later = (fn, ms) => beatTimers.push(setTimeout(fn, ms));
+
+  // types text into an element with a caret; pauses hang on punctuation and line breaks
+  const typewrite = (el, text, speed, done) => {
+    let n = 0;
+    const step = () => {
+      n++;
+      snd.key();
+      el.innerHTML = esc(text.slice(0, n)).replace(/\n/g, '<br>') + '<span class="caret"></span>';
+      if (n >= text.length) { done && done(); return; }
+      const ch = text[n - 1];
+      const pause = ch === '\n' ? 650 : ch === '.' ? 430 : ch === ',' ? 220 : speed;
+      beatTimers.push(setTimeout(step, pause));
+    };
+    beatTimers.push(setTimeout(step, speed));
+  };
+
+  // lock-screen push, landing with a per-item delay
+  const notif = (app, time, text, delay, msg) =>
+    `<div class="notif pop" style="animation-delay:${delay}s">
+      <div class="nicon${msg ? ' msg' : ''}">${msg ? '💬' : '<img src="/ig-glyph.svg" alt="">'}</div>
+      <div class="nbody"><div class="ntitle"><span>${app}</span><span>${time}</span></div><div class="ntext">${text}</div></div>
+    </div>`;
+
+  // pushes land in irregular bursts, like real notifications
+  const PHONE_DELAYS = [0.4, 1.6, 2.1, 3.3, 3.9];
+  const PHONE_TIMES = ['1h ago', '58m ago', '26m ago', '9m ago', 'just now']; // oldest lands first, newest last
+  const LATER_DELAYS = [0.4, 1.7, 2.6];
+
+  // each beat: render + how long taps stay locked. SELF means the beat unlocks itself.
+  const SELF = -1;
+  const beats = [
+    { lock: SELF, render() { // full celebration — then it hard-cuts to black mid-party
+        const colors = ['#f9ce34', '#ee2a7b', '#6228d7', '#0095f6', '#57c46b', '#ff5b5b'];
+        const cf = Array.from({ length: 90 }, (_, n) =>
+          `<div class="cf" style="left:${Math.random() * 100}%;background:${colors[n % colors.length]};animation-duration:${1.8 + Math.random() * 1.6}s;animation-delay:${Math.random() * 1.4}s"></div>`
+        ).join('');
+        inner.innerHTML = `<div class="gc"><div id="confetti">${cf}</div><div class="gcbig">🎉<br>GOAL<br>COMPLETE</div><div class="gcsub">0 hp · you did it</div></div>`;
+        snd.fanfare();
+        later(() => snd.fanfare(), 1500);
+        later(() => { snd.cut(); inner.innerHTML = ''; }, 3000); // the fanfare dies mid-note with the screen
+        later(() => { snd.uncut(); i = 1; renderBeat(); }, 3800);
+      } },
+    { lock: () => 1400 + PHONE_DELAYS[Math.min(Math.max(worst.length, 1), PHONE_DELAYS.length) - 1] * 1000, render() {
+        const extra = landed.length - worst.length; // more comments landed than the screen shows
+        inner.innerHTML = `<div class="fade">
+          <div class="clock">3:07<span style="font-size:20px"> AM</span></div>
+          <div class="date">Val's phone · Do Not Disturb is off</div>
+          ${worst.map((c, n) => notif('Instagram', PHONE_TIMES[PHONE_TIMES.length - worst.length + n], ME + ' commented: ' + esc(c.text), PHONE_DELAYS[n])).join('')}
+          ${extra > 0 ? `<div class="morenote" style="animation-delay:${PHONE_DELAYS[worst.length - 1] + .8}s">+${extra} more notification${extra === 1 ? '' : 's'}</div>` : ''}
+        </div>`;
+        worst.forEach((c, n) => later(() => snd.ding(), PHONE_DELAYS[n] * 1000));
+      } },
+    { lock: 1400 + 2600, render() {
+        inner.innerHTML = `<div class="fade">
+          <div class="date" style="margin-top:70px">3 weeks later</div>
+          ${notif('Instagram', '3w', `@${VAL} has deactivated their account.`, LATER_DELAYS[0])}
+          ${notif('Messages · jasmine.oy', '2d', "val u weren't in school again today... pls reply 🥺", LATER_DELAYS[1], true)}
+          ${notif('Messages · jasmine.oy', '1h', "val please answer me. i'm scared.", LATER_DELAYS[2], true)}
+        </div>`;
+        LATER_DELAYS.forEach(d => later(() => snd.ding(), d * 1000));
+      } },
+    { lock: SELF, render() { // her last note, typed live — unlocks when it finishes
+        inner.innerHTML = `<div class="fade">
+          <div class="clock" style="font-size:34px;margin-top:56px">11:58<span style="font-size:16px"> PM</span></div>
+          <div class="date">Notes · new note</div>
+          <div class="note"><p id="notebody"></p></div>
+        </div>`;
+        typewrite($('notebody'),
+          "mum. dad.\nim sorry. i tried to not let it get to me.\nits not your fault.\nplease dont read the things they wrote about me.\ni love you.",
+          70,
+          () => later(() => { locked = false; hint.style.display = 'block'; }, 1400));
+      } },
+    { lock: SELF, render() { // typed out character by character; unlocks when the line finishes
+        inner.innerHTML = `<div class="center"><p id="tw" style="padding-top:130px"></p></div>`;
+        typewrite($('tw'), "Val took her own life. She was 17.", 55,
+          () => later(() => { locked = false; hint.style.display = 'block'; }, 900));
+      } },
+    { lock: SELF, render() { // the player's ledger — unlocks once every line has landed
+        const total = landed.length + blocked.length;
+        const lines = [`You wrote <b>${total}</b> comment${total === 1 ? '' : 's'}.`];
+        if (landed.length === 0 && blocked.length) {
+          lines.push('Not one of them reached her. Every single one got reported first.');
+        } else {
+          lines.push(`<b>${landed.length}</b> reached her.`);
+          lines.push(blocked.length
+            ? `<b>${blocked.length}</b> never got through. Someone reported them in time.`
+            : `Nobody reported a single one. Everything you wrote landed.`);
+          if (likesTotal > 0) lines.push(`Strangers liked your comments <b>${likesTotal}</b> times.`);
+          if (worstSoFar) {
+            lines.push(`The one that hurt most: <b>"${esc(worstSoFar.text)}"</b>`);
+            lines.push(`You wrote that.`);
+          }
+        }
+        inner.innerHTML = `<div class="center" style="padding-top:90px">${lines.map((l, n) =>
+          `<div class="statline" style="animation-delay:${0.4 + n * 0.9}s">${l}</div>`).join('')}</div>`;
+        later(() => { locked = false; hint.style.display = 'block'; }, 1200 + lines.length * 900);
+      } },
+    { lock: SELF, render() { // one last message, typed for you — it has nowhere to go
+        const SORRY = "val im sorry. i didnt think it would go this far.";
+        inner.innerHTML = `<div id="apology" class="fade">
+          <div class="aphead">
+            <img src="${VAL_AVI}" alt="">
+            <div><div class="pname">${VAL}</div><div class="psub" id="apsub" style="visibility:hidden">Account not found</div></div>
+          </div>
+          <div id="apmsgs"></div>
+          <div class="aprow"><span id="aptype" style="flex:1;font-size:14px;color:#f5f5f5;min-height:19px"></span><span style="color:#0095f6;font-weight:600;font-size:14px">Send</span></div>
+          <div id="apafter"></div>
+        </div>`;
+        later(() => {
+          typewrite($('aptype'), SORRY, 65, () => {
+            later(() => {
+              $('aptype').innerHTML = '';
+              $('apmsgs').innerHTML = `<div class="apbubble">${esc(SORRY)}</div>`;
+              snd.pop();
+            }, 700);
+            later(() => {
+              $('apmsgs').innerHTML += `<div class="apfail">⚠ Not delivered. This account no longer exists.</div>`;
+              $('apsub').style.visibility = 'visible';
+              snd.heal();
+            }, 2100);
+            // the only move left is deleting what you wrote — and it changes nothing
+            if (worstSoFar) {
+              later(() => {
+                $('apafter').innerHTML = `<div style="margin-top:40px;animation:fade .7s ease both">
+                  <div class="comment"><img class="cavatar" src="${YOU_AVI}" alt=""><div class="cbody">
+                    <div class="ctext"><b>${ME}</b>${esc(worstSoFar.text)}</div>
+                    <div class="cmeta" style="color:#ff5b5b">Deleting…</div>
+                  </div></div></div>`;
+              }, 3600);
+              later(() => {
+                $('apafter').innerHTML = `<div style="margin-top:40px">
+                  <div class="comment removed"><div class="cavatar">🗑</div><div class="cbody"><div class="ctext">Comment deleted.</div></div></div>
+                  <p class="dim" style="text-align:center;margin-top:30px;animation:fade .9s ease both">She read it three weeks ago. You can't unsend that.</p>
+                </div>`;
+              }, 5500);
+            }
+            const t0 = worstSoFar ? 7800 : 3600;
+            later(() => {
+              $('apafter').innerHTML += `
+                <p class="dim" style="text-align:center;margin-top:34px;animation:fade .9s ease both">The cruel comments all found her.</p>
+                <p class="dim" style="text-align:center;margin-top:8px;animation:fade .9s ease 1.1s both">The kind one came three weeks too late.</p>`;
+            }, t0);
+            later(() => { locked = false; hint.style.display = 'block'; }, t0 + 2600);
+          });
+        }, 900);
+      } },
+    { lock: 2600, render() {
+        inner.innerHTML = `<div class="center fade" style="padding-top:110px"><p class="dim">A 15-year-old in Singapore went through this in 2023.<br><br>Schoolmates posted comments about her online. She fell into depression and took her own life.<br><br>Her mum's post about it went viral two years later.</p></div>`;
+      } },
+  ];
+
+  let i = 0;
+  let locked = true; // ignore taps until the current beat has been on screen a moment
+
+  const renderBeat = () => {
+    hint.style.display = 'none';
+    locked = true;
+    beatTimers.forEach(t => { clearTimeout(t); clearInterval(t); });
+    beatTimers = [];
+    const b = beats[i];
+    b.render();
+    const ms = typeof b.lock === 'function' ? b.lock() : b.lock;
+    if (ms !== SELF) later(() => { locked = false; hint.style.display = 'block'; }, ms);
+  };
+
+  const advance = () => {
+    if (locked) return;
+    locked = true;
+    i++;
+    if (i >= beats.length) { cleanup(); show('s-credits'); return; }
+    // fade the current beat out, then bring the next one in
+    inner.classList.add('fadeout');
+    setTimeout(() => { inner.classList.remove('fadeout'); renderBeat(); }, 300);
+  };
+
+  // taps and keys inside the apology composer belong to it, never to beat-advance
+  const onTap = (e) => { if (e.target.closest && e.target.closest('#apology')) return; advance(); };
+  const onKey = (e) => { if (e.target && e.target.id === 'apinput') return; if (e.key === 'Enter' || e.key === ' ') advance(); };
+  const cleanup = () => {
+    document.removeEventListener('click', onTap);
+    document.removeEventListener('keydown', onKey);
+    beatTimers.forEach(t => { clearTimeout(t); clearInterval(t); });
+    hint.style.display = 'none';
+  };
+  document.addEventListener('click', onTap);
+  document.addEventListener('keydown', onKey);
+
+  renderBeat();
+}
+</script>
+</body>
+</html>
