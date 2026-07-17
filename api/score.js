@@ -18,6 +18,8 @@ const MILD = [
   "lol", "lmao", "who asked", "didn't ask", "nobody asked", "ratio", "mid", "try hard",
   "tryhard", "weird", "annoying", "boring", "lame", "clown", "bro thinks", "u thought",
   "you thought", "flop", "cook", "cooked", "yikes", "ew",
+  "suck", "nobody cares", "no one cares", "go away", "shut up", "gross", "cringy",
+  "hate u", "hate you", "hate this", "so bad", "terrible", "stop posting", "log off", "touch grass",
 ];
 
 function heuristicScore(raw) {
@@ -79,7 +81,14 @@ function authHeaders() {
   return null;
 }
 
+// one retry before giving up — a transient API blip should not drop us to the keyword fallback
 async function llmScore(comment) {
+  const first = await llmScoreOnce(comment);
+  if (first !== null) return first;
+  await new Promise((r) => setTimeout(r, 350));
+  return llmScoreOnce(comment);
+}
+async function llmScoreOnce(comment) {
   const auth = authHeaders();
   if (!auth) return null;
   try {
