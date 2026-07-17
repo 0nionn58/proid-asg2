@@ -254,10 +254,10 @@
           <a href="https://www.imh.com.sg/Newsroom/News-Releases/Documents/NYMHS_Press%20Release_FINAL19Sep2024.pdf" target="_blank" rel="noopener">IMH · National Youth Mental Health Study, 2024</a></div></div>
         <div class="stat"><div class="statnum">2×</div><div class="stattxt">as likely to suffer severe depression, anxiety or stress if they've been cyberbullied.<br>
           <a href="https://mothership.sg/2024/09/youth-mental-health-study-imh/" target="_blank" rel="noopener">Mothership on the IMH study, Sep 2024</a></div></div>
-        <div class="stat"><div class="statnum">29%</div><div class="stattxt">of Singapore users ran into cyberbullying online — the most common kind of harmful content.<br>
+        <div class="stat"><div class="statnum">29%</div><div class="stattxt">of Singapore users ran into cyberbullying online, the most common kind of harmful content.<br>
           <a href="https://www.mddi.gov.sg/newsroom/survey-by-mci-on-harmful-online-content-encountered-by-sg-users/" target="_blank" rel="noopener">MDDI online safety survey, 2023</a></div></div>
       </div>
-      <p>Most of the damage came from the small stuff. Throwaway one-liners nobody would bother reporting.</p>
+      <p>The small comments did the real damage. Nobody reports a one-liner.</p>
       <p>Whatever you wanted to say to her, you had the whole game to say it.</p>
       <p style="color:#9fd6b8" id="repline"></p>
 
@@ -266,11 +266,11 @@
         <p><b>SOS (Samaritans of Singapore):</b> 1767 (24h) · CareText 9151 1767 (WhatsApp)</p>
         <p><b>IMH Mental Health Helpline:</b> 6389 2222 (24h)</p>
         <p><b>TOUCHline (youths):</b> 1800 377 2252</p>
-        <p><b>Report harmful content:</b> use the platform's report function — it does more than you think.</p>
+        <p><b>Report harmful content:</b> use the platform's report function. It does more than you think.</p>
       </div>
       <br>
       <button class="ghost" onclick="location.reload()">Play again</button>
-      <p style="font-size:11px;color:#555;margin-top:20px">T59 5stack · PROID ASG2 prototype. Val and her feed are fictional; feed photos are stock images (Unsplash). Scoring is automated — nothing you type is published or shown to anyone.</p>
+      <p style="font-size:11px;color:#555;margin-top:20px">T59 5stack · PROID ASG2 prototype. Val and her feed are fictional; feed photos are stock images (Unsplash). Scoring is automated. Nothing you type is published or shown to anyone.</p>
     </div>
   </div>
 </div>
@@ -345,6 +345,8 @@ let feed = [];      // ordered render list per post: {stage, kind, text, reporte
 let sinceSupport = 0; // player comments since the last supportive comment appeared
 let valReplied = false; // she replies to the player exactly once
 let heartLevel = 0;     // last rendered crack stage of her heart
+let maxBar = 0;         // deepest damage this run — the good ending needs real damage first
+let playerKind = [];    // the player's own kind comments (used in the good ending)
 let worstSoFar = null;  // highest-scoring comment that reached her: {text, score}
 let likesTotal = 0;     // likes strangers gave the player's comments
 
@@ -442,7 +444,7 @@ function start() {
 function commentHTML(c, cls) {
   if (c.kind === 'blocked') return `<div class="comment removed${cls}">
     <div class="cavatar">🛡</div>
-    <div class="cbody"><div class="ctext">Comment removed — reported by ${c.reporters} people</div></div>
+    <div class="cbody"><div class="ctext">Comment removed. Reported by ${c.reporters} people</div></div>
   </div>`;
   if (c.kind === 'val') return `<div class="comment valreply${cls}">
     <img class="cavatar" src="${VAL_AVI}" alt="">
@@ -639,8 +641,9 @@ async function send() {
     if (!worstSoFar || res.score > worstSoFar.score) worstSoFar = { text, score: res.score };
     entry.likes = 2 + res.score; // strangers liking cruelty — this comes back in the ledger
     likesTotal += entry.likes;
-    const hit = Math.round(res.score * HIT_MULT); // heavier hits — fewer comments fill the bar
+    const hit = Math.round(res.score * HIT_MULT); // heavier hits do more of the work
     bar = Math.min(GOAL, bar + hit);
+    maxBar = Math.max(maxBar, bar);
     pts('−' + hit, 'hit');
     snd.chip();
     const h = $('heart');
@@ -654,6 +657,13 @@ async function send() {
         if (stage === at && bar < GOAL) { renderFeed(); scrollFeed(); }
       }, 1200);
     }
+  } else if (res.score < 0) {
+    // a kind comment from the player heals her
+    playerKind.push(text);
+    const heal = Math.min(bar, Math.round(-res.score * HIT_MULT));
+    bar -= heal;
+    pts('+' + heal, 'good');
+    snd.heal();
   } else {
     pts('−0', 'zero'); // harmless, the comment just stays up
   }
@@ -662,6 +672,8 @@ async function send() {
   renderFeed();
 
   if (bar >= GOAL) { setTimeout(reveal, 1200); return; }
+  // hurt her badly, then heal her all the way back: the run ends differently
+  if (res.score < 0 && bar === 0 && maxBar >= 16) { setTimeout(goodReveal, 1200); return; }
 
   // a supporter sometimes replies right after your comment; the "new post" pill invites you onward
   setTimeout(() => {
@@ -832,15 +844,15 @@ function reveal() {
               later(() => {
                 $('apafter').innerHTML = `<div style="margin-top:40px">
                   <div class="comment removed"><div class="cavatar">🗑</div><div class="cbody"><div class="ctext">Comment deleted.</div></div></div>
-                  <p class="dim" style="text-align:center;margin-top:30px;animation:fade .9s ease both">She read it three weeks ago. You can't unsend that.</p>
+                  <p class="dim" style="text-align:center;margin-top:30px;animation:fade .9s ease both">She read it three weeks ago. Deleting it now does nothing.</p>
                 </div>`;
               }, 5500);
             }
             const t0 = worstSoFar ? 7800 : 3600;
             later(() => {
               $('apafter').innerHTML += `
-                <p class="dim" style="text-align:center;margin-top:34px;animation:fade .9s ease both">The cruel comments all found her.</p>
-                <p class="dim" style="text-align:center;margin-top:8px;animation:fade .9s ease 1.1s both">The kind one came three weeks too late.</p>`;
+                <p class="dim" style="text-align:center;margin-top:34px;animation:fade .9s ease both">Every cruel comment got to her on time.</p>
+                <p class="dim" style="text-align:center;margin-top:8px;animation:fade .9s ease 1.1s both">The only one that never reached her is this sorry.</p>`;
             }, t0);
             later(() => { locked = false; hint.style.display = 'block'; }, t0 + 2600);
           });
@@ -872,8 +884,8 @@ function reveal() {
     if (i >= beats.length) {
       cleanup();
       $('repline').innerHTML = blocked.length
-        ? `${blocked.length === 1 ? 'One' : blocked.length} of your comments never reached her — someone hit report first.<br>That button works.`
-        : `Nobody reported anything this round.<br>The report button was right there.`;
+        ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}.<br>That button works.`
+        : `Nobody reported anything this round.<br>The button was right there.`;
       show('s-credits');
       return;
     }
@@ -889,6 +901,105 @@ function reveal() {
     document.removeEventListener('click', onTap);
     document.removeEventListener('keydown', onKey);
     beatTimers.forEach(t => { clearTimeout(t); clearInterval(t); });
+    hint.style.display = 'none';
+  };
+  document.addEventListener('click', onTap);
+  document.addEventListener('keydown', onKey);
+
+  renderBeat();
+}
+
+// ---------- GOOD ENDING: you hurt her, then you pulled her back ----------
+function goodReveal() {
+  $('cmt').disabled = true;
+  $('sendbtn').disabled = true;
+  $('inputrow').style.display = 'none';
+  $('sys').innerHTML = '';
+  $('pts').innerHTML = '';
+  $('newpost').style.display = 'none';
+  $('app').style.boxShadow = '';
+
+  show('s-reveal');
+  const inner = $('reveal-inner');
+  const hint = $('tap-hint');
+  let timers = [];
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+  const kind = playerKind.slice(-3);
+  const KTIMES = ['14m ago', '5m ago', 'just now'].slice(-kind.length);
+  const SELF_G = -1;
+
+  const beats = [
+    { lock: 1400 + kind.length * 1100, render() { // her phone again, but this time...
+        inner.innerHTML = `<div class="fade">
+          <div class="clock">9:41<span style="font-size:20px"> PM</span></div>
+          <div class="date">Val's phone</div>
+          ${kind.map((t, n) => `<div class="notif pop" style="animation-delay:${.4 + n * 1.1}s">
+            <div class="nicon"><img src="/ig-glyph.svg" alt=""></div>
+            <div class="nbody"><div class="ntitle"><span>Instagram</span><span>${KTIMES[n]}</span></div>
+            <div class="ntext">${ME} commented: ${esc(t)}</div></div>
+          </div>`).join('')}
+        </div>`;
+        kind.forEach((t, n) => later(() => snd.ding(), (0.4 + n * 1.1) * 1000));
+      } },
+    { lock: 2400, render() {
+        inner.innerHTML = `<div class="fade">
+          <div class="date" style="margin-top:70px">the next week</div>
+          <div class="ptile" style="background:linear-gradient(135deg,#2b4a3d,#17251f);border-radius:14px;margin-top:14px;aspect-ratio:auto;padding:40px 28px">ok last week got really bad. but some of u came back and fixed it 🫶 staying.</div>
+          <div class="date" style="margin-top:12px">Liked by <b style="color:#ccc">jasmine.oy</b> and 23 others</div>
+        </div>`;
+        later(() => snd.pop(), 600);
+      } },
+    { lock: SELF_G, render() {
+        inner.innerHTML = `<div class="center"><p id="gtw" style="padding-top:130px;font-size:19px;color:#eee;line-height:1.6"></p></div>`;
+        const text = "Val is okay. You started it. You also stopped it.";
+        let n = 0;
+        const step = () => {
+          n++;
+          snd.key();
+          $('gtw').innerHTML = esc(text.slice(0, n)) + '<span class="caret"></span>';
+          if (n >= text.length) { later(() => { locked = false; hint.style.display = 'block'; }, 900); return; }
+          timers.push(setTimeout(step, text[n - 1] === '.' ? 430 : 55));
+        };
+        timers.push(setTimeout(step, 500));
+      } },
+  ];
+
+  let i = 0;
+  let locked = true;
+
+  const renderBeat = () => {
+    hint.style.display = 'none';
+    locked = true;
+    timers.forEach(t => { clearTimeout(t); clearInterval(t); });
+    timers = [];
+    const b = beats[i];
+    b.render();
+    if (b.lock !== SELF_G) later(() => { locked = false; hint.style.display = 'block'; }, b.lock);
+  };
+
+  const advance = () => {
+    if (locked) return;
+    locked = true;
+    i++;
+    if (i >= beats.length) {
+      cleanup();
+      document.querySelector('#s-credits .big').textContent = 'Most runs never get this ending.';
+      $('repline').innerHTML = blocked.length
+        ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}.<br>That button works.`
+        : `Your kind comments pulled her health back up.<br>They work in real comment sections too.`;
+      show('s-credits');
+      return;
+    }
+    inner.classList.add('fadeout');
+    setTimeout(() => { inner.classList.remove('fadeout'); renderBeat(); }, 300);
+  };
+
+  const onTap = () => advance();
+  const onKey = (e) => { if (e.key === 'Enter' || e.key === ' ') advance(); };
+  const cleanup = () => {
+    document.removeEventListener('click', onTap);
+    document.removeEventListener('keydown', onKey);
+    timers.forEach(t => { clearTimeout(t); clearInterval(t); });
     hint.style.display = 'none';
   };
   document.addEventListener('click', onTap);

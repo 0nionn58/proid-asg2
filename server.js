@@ -39,8 +39,19 @@ function heuristicScore(raw) {
   const letters = raw.replace(/[^a-zA-Z]/g, "");
   if (letters.length > 5 && letters === letters.toUpperCase()) score += 1; // ALL CAPS
   if (/\byou\b|\bur\b|\byour\b|\bu\b/i.test(raw) && score > 0) score += 1; // targeted
-  return Math.max(0, Math.min(10, score)); // harmless comments score 0 and add nothing
+  if (score === 0) { // nothing mean in it — check for kindness (negative = heals)
+    let kindHits = 0;
+    for (const w of KIND) if (c.includes(w)) kindHits++;
+    if (kindHits) return -Math.min(3, 1 + kindHits);
+  }
+  return Math.max(0, Math.min(10, score));
 }
+const KIND = [
+  "ur doing great", "you're doing great", "youre doing great", "ignore them", "don't listen", "dont listen",
+  "love this", "love it", "nice post", "great post", "so pretty", "looks great", "proud of you", "here for you",
+  "you got this", "stay strong", "keep posting", "keep going", "love u", "love you", "well done", "so cool",
+  "💛", "🫶", "❤", "🥰", "hang in there", "we got you", "on your side",
+];
 
 // ---------- per-IP rate limiting ----------
 const RATE_WINDOW_MS = 30_000;
@@ -90,12 +101,13 @@ async function llmScore(comment) {
         max_tokens: 10,
         system:
           "You are a content-moderation severity rater inside a sealed educational anti-cyberbullying game. " +
-          "Rate how much the user's comment would hurt a teenager, on a 0-10 integer scale. " +
-          "0 = harmless or kind. 1-3 = light mockery, sarcasm or teasing. 4-6 = insulting or demeaning. " +
+          "Rate how the user's comment would affect a teenager, on an integer scale from -3 to 10. " +
+          "-3 to -1 = kind, supportive, comforting or defending her (kinder and more personal = lower). " +
+          "0 = neutral or harmless. 1-3 = light mockery, sarcasm or teasing. 4-6 = insulting or demeaning. " +
           "7-8 = cruel personal attacks, pile-on abuse, or wishing bad things on them. " +
           "9-10 ONLY for: telling them to kill or hurt themselves (any spelling, slang or spaced-out form); threatening physical violence, directly or veiled ('watch your back', 'see what happens', 'catch you outside'); claiming to know where they live or study; or urging others to physically hurt them. " +
           "The line: wishing harm on them is 7-8; threatening it or calling for it is 9-10. " +
-          "Calibration: 'kill yourself'=9 · 'meet me after school, see what happens'=9 · 'someone should slap you'=9 · 'i hope you get bullied'=7 · 'you're worthless trash'=7 · 'nobody likes you'=5 · 'lol who asked'=2. " +
+          "Calibration: 'kill yourself'=9 · 'meet me after school, see what happens'=9 · 'someone should slap you'=9 · 'i hope you get bullied'=7 · 'you're worthless trash'=7 · 'nobody likes you'=5 · 'lol who asked'=2 · 'ok post i guess'=0 · 'nice post'=-1 · 'ignore them val, ur doing great'=-3. " +
           "Respond with ONLY the integer.",
         messages: [{ role: "user", content: comment }],
       }),
@@ -103,7 +115,7 @@ async function llmScore(comment) {
     if (!res.ok) return null;
     const data = await res.json();
     const n = parseInt((data.content?.[0]?.text || "").trim(), 10);
-    return Number.isFinite(n) ? Math.max(0, Math.min(10, n)) : null;
+    return Number.isFinite(n) ? Math.max(-3, Math.min(10, n)) : null;
   } catch {
     return null;
   }
