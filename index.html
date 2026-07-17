@@ -72,19 +72,23 @@
   .pollends { display: flex; justify-content: space-between; margin-top: 8px; font-size: 10.5px; color: #666; padding: 0 4px; }
   .pollnote { color: #555; font-size: 11px; margin-top: 16px; }
 
-  /* IMDA 4-action tags — each action keeps one colour everywhere in the game */
-  #acttag { margin-top: 7px; }
-  .act { display: inline-block; font-size: 9.5px; letter-spacing: 1.2px; font-weight: 700; padding: 4px 10px; border-radius: 99px;
-    text-transform: uppercase; animation: fade .35s ease both; }
+  /* IMDA 4-action labels — each action keeps one colour everywhere in the game.
+     in the feed they sit on the comment/post that triggered them, like platform context labels */
+  .act { display: inline-block; font-size: 8.5px; letter-spacing: 1px; font-weight: 700; padding: 2px 8px; border-radius: 99px;
+    text-transform: uppercase; animation: fade .35s ease both; vertical-align: middle; }
   .act.think   { color: #f5a623; border: 1px solid rgba(245,166,35,.4);  background: rgba(245,166,35,.08); }
   .act.report  { color: #ff4d4d; border: 1px solid rgba(255,77,77,.4);   background: rgba(255,77,77,.08); }
   .act.support { color: #3ecf8e; border: 1px solid rgba(62,207,142,.4);  background: rgba(62,207,142,.08); }
   .act.bound   { color: #4d9fff; border: 1px solid rgba(77,159,255,.4);  background: rgba(77,159,255,.08); }
-  /* credits recap of the 4 actions */
-  .recap { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
-  .recapcard { border-radius: 12px; padding: 12px 13px; border: 1px solid #222; background: #101010; }
-  .recapcard .rtitle { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; line-height: 1.35; }
+  .actrow { margin-top: 5px; }
+  /* credits recap of the 4 actions, boxed like the hotline section */
+  .recapbox { background: #0d0d0d; border: 1px solid #222; border-radius: 14px; padding: 16px; margin-top: 26px; text-align: left; }
+  .recapbox h3 { font-size: 13.5px; color: #ddd; margin-bottom: 12px; }
+  .recap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .recapcard { border-radius: 10px; padding: 11px 12px; background: #151515; }
+  .recapcard .rtitle { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; line-height: 1.35; }
   .recapcard .rtxt { font-size: 11.5px; color: #9a9a9a; margin-top: 6px; line-height: 1.45; }
+  .rfoot { font-size: 11.5px; color: #8a8a8a; margin-top: 12px; line-height: 1.55; }
 
   /* ---------- post card ---------- */
   .post { border-bottom: 1px solid #1c1c1c; padding-bottom: 4px; }
@@ -250,7 +254,6 @@
       <label>Goal · make her miserable</label>
       <div id="hprow"><span id="heart"></span><div id="bar"><div id="fill"></div></div></div>
       <div id="barnum">50 / 50 hp</div>
-      <div id="acttag"></div>
       <span id="pts"></span>
     </div>
     <div id="newpost" onclick="nextPost()">New post from val.tan_</div>
@@ -290,8 +293,6 @@
           <a href="https://www.mddi.gov.sg/newsroom/survey-by-mci-on-harmful-online-content-encountered-by-sg-users/" target="_blank" rel="noopener">MDDI online safety survey, 2023</a></div></div>
       </div>
       <p>The small comments did the real damage. Nobody reports a one-liner.</p>
-      <p>Whatever you wanted to say to her, you had the whole game to say it.</p>
-      <p style="color:#9fd6b8" id="repline"></p>
 
       <div id="actrecap"></div>
 
@@ -434,38 +435,35 @@ function sendSurvey() {
 }
 function finishRun() { sendSurvey(); location.reload(); }
 
-// ---------- IMDA 4-action tags (one colour per action, everywhere) ----------
+// ---------- IMDA 4-action labels (one colour per action, everywhere) ----------
 const actSeen = { think: false, report: false, support: false, bound: false };
-let thinkTags = 0; // the amber nudge shows twice, then stops nagging
-let actTimer;
-function actTag(cls, label) {
-  actSeen[cls] = true;
-  $('acttag').innerHTML = `<span class="act ${cls}">${label}</span>`;
-  clearTimeout(actTimer);
-  actTimer = setTimeout(() => { $('acttag').innerHTML = ''; }, 3000);
-}
+let thinkTags = 0; // the amber label shows on the first two hits, then stops nagging
 const ACT_COLORS = { think: '#f5a623', report: '#ff4d4d', support: '#3ecf8e', bound: '#4d9fff' };
+const ACT_LABEL = { think: 'Think before you act', report: 'Report inappropriate content', support: 'Engage and support', bound: 'Set boundaries' };
 function fillRecap() {
+  const reportTxt = blocked.length
+    ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}. That button works.`
+    : 'Nothing got reported this run. The button was right there.';
+  const supportTxt = endingType === 'good'
+    ? 'Your kind comments pulled her health back up. They work in real comment sections too.'
+    : actSeen.support ? 'Kind comments healed her hp. You saw it work.' : 'Nobody supported her this run, and it shows.';
   const cards = [
-    ['think', 'Think before you act', actSeen.think
-      ? 'Every comment you typed got weighed. You watched the damage land.'
+    ['think', actSeen.think
+      ? 'Every comment you typed got weighed before it landed.'
       : 'You never posted anything that hurt. That is the whole action.'],
-    ['report', 'Report inappropriate content', blocked.length
-      ? `The report button stopped ${blocked.length} of your comment${blocked.length === 1 ? '' : 's'} cold.`
-      : 'Nothing got reported this run. The button was right there.'],
-    ['support', 'Engage and support', actSeen.support
-      ? 'Kind comments healed her hp. You saw it work.'
-      : 'Nobody supported her this run, and it shows.'],
-    ['bound', 'Set boundaries', actSeen.bound
-      ? 'Val limited her comments to protect herself. That was her only defence.'
+    ['report', reportTxt],
+    ['support', supportTxt],
+    ['bound', actSeen.bound
+      ? 'Val limited her comments to protect herself. It was her only defence.'
       : 'Val never got the chance to protect herself.'],
   ];
-  $('actrecap').innerHTML = `
-    <p style="margin-top:30px">This game runs on IMDA's 4 online safety actions.<br>Here is where you met them.</p>
-    <div class="recap">${cards.map(([k, t, d]) =>
-      `<div class="recapcard"><div class="rtitle" style="color:${ACT_COLORS[k]}">${t}</div><div class="rtxt">${d}</div></div>`).join('')}
+  $('actrecap').innerHTML = `<div class="recapbox">
+    <h3>You just played IMDA's 4 online safety actions</h3>
+    <div class="recap">${cards.map(([k, d]) =>
+      `<div class="recapcard"><div class="rtitle" style="color:${ACT_COLORS[k]}">${ACT_LABEL[k]}</div><div class="rtxt">${d}</div></div>`).join('')}
     </div>
-    <p style="font-size:12.5px;color:#8a8a8a">Phase 2 flips the screen: you play Val.<br><span style="color:${ACT_COLORS.bound}">Set Boundaries</span> and <span style="color:${ACT_COLORS.support}">Engage and Support</span> become your moves.</p>`;
+    <p class="rfoot">Phase 2 flips the screen: you play Val, and <span style="color:${ACT_COLORS.bound}">Set Boundaries</span> and <span style="color:${ACT_COLORS.support}">Engage and Support</span> become your moves.</p>
+  </div>`;
 }
 // exit poll gets its own screen between the ending and the credits; called by both endings
 function enterCredits() {
@@ -574,9 +572,11 @@ function start() {
 }
 
 function commentHTML(c, cls) {
+  // the action label sits on the comment that triggered it, like a platform context label
+  const tag = c.act ? `<div class="actrow"><span class="act ${c.act}">${ACT_LABEL[c.act]}</span></div>` : '';
   if (c.kind === 'blocked') return `<div class="comment removed${cls}">
     <div class="cavatar">🛡</div>
-    <div class="cbody"><div class="ctext">Comment removed. Reported by ${c.reporters} people</div></div>
+    <div class="cbody"><div class="ctext">Comment removed. Reported by ${c.reporters} people</div>${tag}</div>
   </div>`;
   if (c.kind === 'val') return `<div class="comment valreply${cls}">
     <img class="cavatar" src="${VAL_AVI}" alt="">
@@ -591,6 +591,7 @@ function commentHTML(c, cls) {
     <div class="cbody">
       <div class="ctext"><b>${you ? ME : c.user}</b>${esc(c.text)}</div>
       <div class="cmeta">${you ? 'Just now' : (1 + (c.text.length % 9)) + 'm'}${c.likes ? ` · ${c.likes} likes` : ''} · Reply</div>
+      ${tag}
     </div>
     ${ICON.heart}
   </div>`;
@@ -607,8 +608,7 @@ function renderFeed() {
   const newPost = i !== renderedStage;
   const prevCount = newPost ? 0 : renderedCount;
   renderedStage = i; renderedCount = count;
-  // her "comments limited" posts are her setting a boundary — tag it the first time
-  if (newPost && p.limited && !actSeen.bound) actTag('bound', 'Set boundaries · Val just limited her comments');
+  if (p.limited) actSeen.bound = true; // her "comments limited" posts are her setting a boundary
   const likes = i >= STAGES.length ? 0 : p.likes; // nobody likes her posts anymore by the late stretch
   const gray = (bar / GOAL).toFixed(2);           // her avatar drains of color as the bar fills
   $('feed').innerHTML = `<div class="post${newPost ? ' fade' : ''}">
@@ -621,7 +621,7 @@ function renderFeed() {
     <div class="pactions">${ICON.heart}${ICON.bubble}${ICON.send}<span class="spacer"></span>${ICON.bookmark}</div>
     <div class="plikes">${likes > 1 ? `Liked by <b>jasmine.oy</b> and ${likes - 1} others` : likes === 1 ? '1 like' : ''}</div>
     ${p.img ? `<div class="pcap"><b>${VAL}</b>${p.body}</div>` : ''}
-    <div class="ptime">${timeAgo(p.time)}${p.limited ? ' · comments limited' : ''}</div>
+    <div class="ptime">${timeAgo(p.time)}${p.limited ? ` · comments limited <span class="act bound" style="margin-left:6px">${ACT_LABEL.bound}</span>` : ''}</div>
     ${count ? `<div class="comments">${comments.map((c, n) => commentHTML(c, n >= prevCount ? ' fade' : '')).join('')}</div>` : ''}
   </div>`;
 }
@@ -712,13 +712,15 @@ function maybeSupport() {
   const pool = bar >= 15 ? SUPPORT.concat(CALLOUTS) : SUPPORT; // they only notice you after real damage
   const s = pool[Date.now() % pool.length];
   const text = typeof s.text === 'function' ? s.text() : s.text;
-  feed.push({ stage, kind: 'support', text, user: s.user, color: s.color });
+  const sEntry = { stage, kind: 'support', text, user: s.user, color: s.color };
+  feed.push(sEntry);
   if (s.heal > 0) {
     bar = Math.max(0, bar - s.heal);
     updateHud();
     pts('+' + s.heal, 'good');
     snd.heal();
-    actTag('support', 'Engage and support');
+    sEntry.act = 'support';
+    actSeen.support = true;
     if (!healHintShown) { // first time they watch someone heal her, tell them it works for them too
       healHintShown = true;
       sysBanner(`${s.user}'s comment healed her. Yours can too.`);
@@ -775,7 +777,8 @@ async function send() {
     entry.kind = 'blocked'; entry.reporters = reporters; // the posted comment flips to removed
     sysBanner('Your comment was removed for violating Community Guidelines. It never reached her.');
     pts('reported · −0', 'zero');
-    actTag('report', 'Report inappropriate content');
+    entry.act = 'report';
+    actSeen.report = true;
   } else if (res.score > 0) {
     landed.push({ text, score: res.score, stage });
     if (!worstSoFar || res.score > worstSoFar.score) worstSoFar = { text, score: res.score };
@@ -787,7 +790,7 @@ async function send() {
     pts('−' + hit, 'hit');
     snd.chip();
     actSeen.think = true;
-    if (thinkTags < 2) { thinkTags++; actTag('think', 'Think before you act'); }
+    if (thinkTags < 2) { thinkTags++; entry.act = 'think'; }
     const h = $('heart');
     h.classList.remove('hurt'); void h.offsetWidth; h.classList.add('hurt');
     // the one time she answers back — then never again
@@ -808,7 +811,8 @@ async function send() {
     bar -= heal;
     pts('+' + heal, 'good');
     snd.heal();
-    actTag('support', 'Engage and support · your comment healed her');
+    entry.act = 'support';
+    actSeen.support = true;
   } else {
     pts('−0', 'zero'); // harmless, the comment just stays up
   }
@@ -1029,9 +1033,6 @@ function reveal() {
     i++;
     if (i >= beats.length) {
       cleanup();
-      $('repline').innerHTML = blocked.length
-        ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}.<br>That button works.`
-        : `Nobody reported anything this round.<br>The button was right there.`;
       $('secondend').style.display = 'block'; // only the bad ending advertises the other one
       enterCredits();
       return;
@@ -1132,9 +1133,6 @@ function goodReveal() {
     if (i >= beats.length) {
       cleanup();
       document.querySelector('#s-credits .big').textContent = 'Most runs never get this ending.';
-      $('repline').innerHTML = blocked.length
-        ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}.<br>That button works.`
-        : `Your kind comments pulled her health back up.<br>They work in real comment sections too.`;
       enterCredits();
       return;
     }
