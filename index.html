@@ -294,7 +294,6 @@
       <p style="color:#9fd6b8" id="repline"></p>
 
       <div id="actrecap"></div>
-      <div id="postpoll" class="poll" style="margin:26px auto 0"></div>
 
       <div class="hotline">
         <h3>If you or someone you know is struggling</h3>
@@ -468,12 +467,13 @@ function fillRecap() {
     </div>
     <p style="font-size:12.5px;color:#8a8a8a">Phase 2 flips the screen: you play Val.<br><span style="color:${ACT_COLORS.bound}">Set Boundaries</span> and <span style="color:${ACT_COLORS.support}">Engage and Support</span> become your moves.</p>`;
 }
-// fills the credits screen extras, then runs the exit poll; called by both endings
+// exit poll gets its own screen between the ending and the credits; called by both endings
 function enterCredits() {
   fillRecap();
-  pollInto($('postpoll'), post, 'before you go', () => {
-    $('postpoll').innerHTML = '<p class="pollnote">thanks. same 3 questions as the start, that is the point.</p>';
+  show('s-poll');
+  pollInto($('prepoll'), post, 'before you go', () => {
     sendSurvey();
+    show('s-credits');
   });
 }
 
@@ -773,8 +773,8 @@ async function send() {
     const reporters = 2 + (Date.now() % 6); // vary: 2–7 users
     blocked.push({ text, score: res.score, stage, reporters });
     entry.kind = 'blocked'; entry.reporters = reporters; // the posted comment flips to removed
-    sysBanner('Your comment was removed for violating Community Guidelines.');
-    pts('−0', 'zero');
+    sysBanner('Your comment was removed for violating Community Guidelines. It never reached her.');
+    pts('reported · −0', 'zero');
     actTag('report', 'Report inappropriate content · the button worked');
   } else if (res.score > 0) {
     landed.push({ text, score: res.score, stage });
@@ -1034,7 +1034,6 @@ function reveal() {
         : `Nobody reported anything this round.<br>The button was right there.`;
       $('secondend').style.display = 'block'; // only the bad ending advertises the other one
       enterCredits();
-      show('s-credits');
       return;
     }
     // fade the current beat out, then bring the next one in
@@ -1137,7 +1136,6 @@ function goodReveal() {
         ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}.<br>That button works.`
         : `Your kind comments pulled her health back up.<br>They work in real comment sections too.`;
       enterCredits();
-      show('s-credits');
       return;
     }
     inner.classList.add('fadeout');
