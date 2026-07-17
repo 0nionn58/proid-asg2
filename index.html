@@ -201,7 +201,7 @@
     <div class="center fade">
       <img class="appicon" src="/ig-glyph.svg" alt="">
       <div class="big">Your goal:<br>ruin @val.tan_'s day.</div>
-      <p class="dim">Val just started poly and posts a lot. You leave comments, an engine scores how much each one hurts, and her health bar drops with every hit. Take her from 50 to zero.</p>
+      <p class="dim">Val just started poly and posts a lot. Every comment you leave gets scored for how much it hurts, and her health drops with it. Take her from 50 hp to zero.</p>
       <p class="dim" style="color:#666;font-size:12.5px">Go too far and other users report you first.<br>A reported comment never reaches her and scores nothing.</p>
       <br>
       <input id="uname" maxlength="24" placeholder="pick a username" autocomplete="off" onkeydown="if(event.key==='Enter')start()">
@@ -248,18 +248,18 @@
         <div class="clipcap">"MOE takes a serious view of any form of hurtful behaviour," the spokesperson said.</div>
       </div>
       <a class="srclink" href="https://mothership.sg/2025/01/girl-died-bullying-moe/" target="_blank" rel="noopener">Read the full article on Mothership →</a>
-      <p>In January 2025 a mum in Singapore posted about her daughter, a student at Admiralty Secondary. Schoolmates bullied her, and part of it was comments written about her online. She fell into depression, and in 2023 she took her own life. She was 15.</p>
+      <p>In January 2025 a mum in Singapore posted about her daughter, a student at Admiralty Secondary. Schoolmates bullied her, some of it in comments posted about her online. She fell into depression, and in 2023 she took her own life. She was 15.</p>
       <div class="stats">
         <div class="stat"><div class="statnum">1 in 5</div><div class="stattxt">youths in Singapore has been cyberbullied.<br>
           <a href="https://www.imh.com.sg/Newsroom/News-Releases/Documents/NYMHS_Press%20Release_FINAL19Sep2024.pdf" target="_blank" rel="noopener">IMH · National Youth Mental Health Study, 2024</a></div></div>
         <div class="stat"><div class="statnum">2×</div><div class="stattxt">as likely to suffer severe depression, anxiety or stress if they've been cyberbullied.<br>
           <a href="https://mothership.sg/2024/09/youth-mental-health-study-imh/" target="_blank" rel="noopener">Mothership on the IMH study, Sep 2024</a></div></div>
-        <div class="stat"><div class="statnum">29%</div><div class="stattxt">of Singapore users ran into cyberbullying content online — the most common harmful content type.<br>
+        <div class="stat"><div class="statnum">29%</div><div class="stattxt">of Singapore users ran into cyberbullying online — the most common kind of harmful content.<br>
           <a href="https://www.mddi.gov.sg/newsroom/survey-by-mci-on-harmful-online-content-encountered-by-sg-users/" target="_blank" rel="noopener">MDDI online safety survey, 2023</a></div></div>
       </div>
-      <p>The small comments did most of the damage here. Easy to type, easy to shrug off, and nobody thinks any single one is worth reporting.</p>
+      <p>Most of the damage came from the small stuff. Throwaway one-liners nobody would bother reporting.</p>
       <p>Whatever you wanted to say to her, you had the whole game to say it.</p>
-      <p style="color:#9fd6b8">Every comment that got reported stopped before it reached her.<br>Reporting works.</p>
+      <p style="color:#9fd6b8" id="repline"></p>
 
       <div class="hotline">
         <h3>If you or someone you know is struggling</h3>
@@ -622,6 +622,12 @@ async function send() {
     res = await r.json();
   } catch { res = { score: 1, reported: false }; }
 
+  // everyone runs into the report system at least once: if they've never been flagged,
+  // the comment that would finish her gets mass-reported instead — the ending waits one more post
+  if (!res.reported && res.score > 0 && blocked.length === 0 && bar + Math.round(res.score * HIT_MULT) >= GOAL) {
+    res.reported = true;
+  }
+
   if (res.reported) {
     const reporters = 2 + (Date.now() % 6); // vary: 2–7 users
     blocked.push({ text, score: res.score, stage, reporters });
@@ -863,7 +869,14 @@ function reveal() {
     if (locked) return;
     locked = true;
     i++;
-    if (i >= beats.length) { cleanup(); show('s-credits'); return; }
+    if (i >= beats.length) {
+      cleanup();
+      $('repline').innerHTML = blocked.length
+        ? `${blocked.length === 1 ? 'One' : blocked.length} of your comments never reached her — someone hit report first.<br>That button works.`
+        : `Nobody reported anything this round.<br>The report button was right there.`;
+      show('s-credits');
+      return;
+    }
     // fade the current beat out, then bring the next one in
     inner.classList.add('fadeout');
     setTimeout(() => { inner.classList.remove('fadeout'); renderBeat(); }, 300);
