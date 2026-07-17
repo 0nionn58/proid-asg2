@@ -1469,7 +1469,7 @@ function vIncoming(count, done) {
     window._lastHate = { id, c };
     if (!(vMuted && c.user === HANDLES[0])) vDrain(vDmg(c.score) * (vNight ? 2 : 1));
     i++;
-    vLater(step, 1050);
+    vLater(step, 1500);
   };
   step();
 }
@@ -1497,11 +1497,11 @@ function vBeat1() {
         vUsedBound++; actSeen.bound = true; vLimited = 2;
         vHeal(3);
         vLine(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>comments limited. strangers need your ok to reply now.`);
-        vLater(vBeat2, 1600);
+        vLater(vBeat2, 3000);
       } },
     { label: 'Keep scrolling the thread', sub: 'see what else they said', fn() {
         const h0 = vhp;
-        vIncoming(2, () => { vTrap('kept scrolling the monday thread', h0 - vhp); vLater(vBeat2, 1100); });
+        vIncoming(2, () => { vTrap('kept scrolling the monday thread', h0 - vhp); vLater(vBeat2, 2400); });
       } },
   ]));
 }
@@ -1518,7 +1518,7 @@ function vBeat2() {
         vLater(() => {
           vDM('jasmine.oy', 'yes. always. save me a seat');
           vLine(`<span class="act support">${ACT_LABEL.support}</span><br><br>telling someone does not delete the comments. it means you stop carrying them alone.`);
-          vLater(vBeat3, 1900);
+          vLater(vBeat3, 3200);
         }, 1200);
       } },
     { label: 'Post "im fine guys 😅"', sub: 'shut the topic down in one move', fn() {
@@ -1526,7 +1526,7 @@ function vBeat2() {
         vHeal(1);
         vLine('you left her on read and posted instead.');
         vPostCard({ bg: 'linear-gradient(135deg,#26262b,#141417)', body: 'im fine guys 😅 stop dming me' });
-        vLater(vBeat3, 1700);
+        vLater(vBeat3, 3000);
       } },
   ]), 1500);
 }
@@ -1553,13 +1553,13 @@ function vBeat3() {
           const el = $(last.id);
           if (el) el.outerHTML = `<div class="comment removed fade"><div class="cavatar">🛡</div><div class="cbody"><div class="ctext">Comment removed. You reported it.</div><div class="actrow"><span class="act report">${ACT_LABEL.report}</span></div></div></div>`;
           vLine('gone in under a minute. in phase 1 this happened to you.');
-          vLater(vBeat4, 1900);
+          vLater(vBeat4, 3200);
         } },
       { label: 'Restrict the account', sub: 'you never have to see them again', fn() {
           vMuted = true; vUsedBound++; actSeen.bound = true;
           vHeal(2);
           vLine(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>${HANDLES[0]} is restricted. you decide what you read now.`);
-          vLater(vBeat4, 1800);
+          vLater(vBeat4, 3200);
         } },
       { label: 'Reply to them', sub: 'they cannot just say that', fn() { vReplyUI(last); } },
     ]);
@@ -1595,7 +1595,7 @@ async function vSendReply() {
     vHeal(3);
     vLine('you kept it level. nothing there for the pile-on to feed on.');
   }
-  vLater(vBeat4, 1800);
+  vLater(vBeat4, 3200);
 }
 function vBeat4() {
   if (vOver) return;
@@ -1623,11 +1623,11 @@ function vBeat4() {
           vUsedSupport++; vDefended = true; actSeen.support = true;
           vHeal(3);
           vLine(`<span class="act support">${ACT_LABEL.support}</span><br><br>you commented: "ignore them kai. they did the same to me. says nothing about u." he liked it 10 seconds later.`);
-          vLater(vBeat5, 1900);
+          vLater(vBeat5, 3200);
         } },
       { label: 'Stay out of it', sub: 'not your fight today', fn() {
           vLine('you closed the thread. he is on his own, like you were.');
-          vLater(vBeat5, 1600);
+          vLater(vBeat5, 2800);
         } },
     ]), 2400);
   }, 1100);
@@ -1653,14 +1653,14 @@ function vBeat5() {
           bo.classList.remove('on');
           vHeal(4);
           vLine(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>eight hours where none of them could reach you.`);
-          vLater(vBeat6, 1700);
+          vLater(vBeat6, 3000);
         }, 1600);
       } },
     { label: 'Read it one more time', sub: 'it is pinned in your head anyway', fn() {
         if (vWorst) { vTrap('reread the worst comment at midnight', vDmg(vWorst.score)); vDrain(vDmg(vWorst.score)); }
         if (vOver) return;
         vLine('same words. they hit the same every time. rereading changes nothing except you.');
-        vLater(vBeat6, 1700);
+        vLater(vBeat6, 3000);
       } },
     { label: 'Keep scrolling', sub: 'just five more minutes', fn() {
         $('vfeed').insertAdjacentHTML('beforeend', '<div class="comments" style="padding:2px 14px 8px"></div>');
@@ -1671,7 +1671,7 @@ function vBeat5() {
           if (vOver) return;
           vTrap('kept scrolling past midnight', h0 - vhp);
           vLine('everything lands twice as hard at midnight.');
-          vLater(vBeat6, 1600);
+          vLater(vBeat6, 2800);
         });
       } },
   ]), vWorst ? 2200 : 1300);
@@ -1689,13 +1689,13 @@ function vBeat6() {
         vUsedSupport++; vReachedOut = true; actSeen.support = true;
         vHeal(4);
         vLine(`<span class="act support">${ACT_LABEL.support}</span><br><br>she did not fully get it. she sat with you anyway. that was enough.`);
-        vLater(vEnding, 2100);
+        vLater(vEnding, 3200);
       } },
     { label: 'Say you are just tired', sub: 'easier than explaining', fn() {
         vTrap('told mum you were just tired', 0);
         vLine('she believed you. the room got quiet again.');
         if (vhp <= 22 && !vReachedOut) vLater(vSpiral, 1700);
-        else vLater(vEnding, 1700);
+        else vLater(vEnding, 2800);
       } },
   ]), 1500);
 }
@@ -1710,7 +1710,7 @@ function vSpiral() {
     vNight = false;
     if (vOver) return;
     vTrap('went back to the app at 3 am', h0 - vhp);
-    vLater(vEnding, 1500);
+    vLater(vEnding, 2800);
   }), 1000);
 }
 
@@ -1772,18 +1772,24 @@ function caughtEnding() {
     : 'she never got a reply all week. friday morning she was at your door.'));
   lines.push('in 2023 a girl in singapore went through this exact week, and nobody got there in time.<br><br>this ending only exists because someone noticed.<br>in real life that is not guaranteed. be the someone.<br><br><span style="color:#7ab8f5;font-size:13px">SOS 1767 · CareText 9151 1767 (WhatsApp) · TOUCHline 1800 377 2252</span>');
 
-  let i = 0;
-  const step = () => {
+  // tap to advance — each beat waits for the player, nothing moves on its own
+  let i = 0, locked = true;
+  const showBeat = () => {
+    locked = true;
     bo.innerHTML = `<div class="fade" style="max-width:330px;width:100%">${lines[i]}</div>`;
     snd.heal();
-    i++;
-    if (i < lines.length) vTimers.push(setTimeout(step, i === 2 && vTraps.length ? 3600 : 2900));
-    else vTimers.push(setTimeout(() => {
-      bo.insertAdjacentHTML('beforeend', '<div style="position:absolute;bottom:26px;left:0;right:0;color:#666;font-size:12px;animation:pulse 1.8s ease-in-out infinite">tap to continue</div>');
-      bo.onclick = () => { bo.onclick = null; bo.classList.remove('on'); bo.innerHTML = ''; p2Credits(); };
-    }, 3200));
+    vTimers.push(setTimeout(() => {
+      locked = false;
+      bo.insertAdjacentHTML('beforeend', '<div style="position:absolute;bottom:26px;left:0;right:0;text-align:center;color:#666;font-size:12px;animation:pulse 1.8s ease-in-out infinite">tap to continue</div>');
+    }, 1800));
   };
-  step();
+  bo.onclick = () => {
+    if (locked) return;
+    i++;
+    if (i >= lines.length) { bo.onclick = null; bo.classList.remove('on'); bo.innerHTML = ''; p2Credits(); return; }
+    showBeat();
+  };
+  showBeat();
 }
 function p2Credits() {
   endingType = vhp <= 0 ? 'p2caught' : vGoodEnd ? 'p2good' : 'p2barely';
