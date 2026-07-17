@@ -140,6 +140,22 @@ Bun.serve({
         threshold: REPORT_THRESHOLD,
       });
     }
+    // anonymous run data (pre/post poll answers + telemetry) — forwarded to a Google Sheet webhook if configured
+    if (url.pathname === "/api/survey" && req.method === "POST") {
+      const data = await req.json().catch(() => null);
+      if (data) {
+        console.log("[survey]", JSON.stringify(data).slice(0, 400));
+        const hook = process.env.SURVEY_WEBHOOK_URL;
+        if (hook) {
+          fetch(hook, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ts: new Date().toISOString(), ...data }),
+          }).catch(() => {});
+        }
+      }
+      return new Response(null, { status: 204 });
+    }
     if (url.pathname === "/" || url.pathname === "/index.html") {
       return new Response(Bun.file(import.meta.dir + "/index.html"));
     }

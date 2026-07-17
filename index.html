@@ -60,6 +60,32 @@
     cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.45); animation: fade .3s ease both, nudge 4s ease 1.5s infinite; }
   @keyframes nudge { 0%, 88%, 100% { transform: translateY(0); } 92% { transform: translateY(-4px); } 96% { transform: translateY(1px); } }
 
+  /* quick 3-question poll, asked before the run and again at the credits */
+  .poll { max-width: 340px; margin: 90px auto 0; text-align: center; }
+  .pollq { background: #141416; border: 1px solid #262626; border-radius: 16px; padding: 26px 20px; animation: fade .35s ease both; }
+  .pollstep { font-size: 10.5px; letter-spacing: 2px; color: #666; text-transform: uppercase; margin-bottom: 14px; }
+  .polltext { font-size: 17px; font-weight: 600; line-height: 1.45; }
+  .likert { display: flex; gap: 8px; justify-content: center; margin-top: 22px; }
+  .likert button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid #333; background: #1b1b1e; color: #ddd;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: transform .1s, background .15s; }
+  .likert button:hover { background: #26262b; transform: scale(1.08); }
+  .pollends { display: flex; justify-content: space-between; margin-top: 8px; font-size: 10.5px; color: #666; padding: 0 4px; }
+  .pollnote { color: #555; font-size: 11px; margin-top: 16px; }
+
+  /* IMDA 4-action tags — each action keeps one colour everywhere in the game */
+  #acttag { margin-top: 7px; }
+  .act { display: inline-block; font-size: 9.5px; letter-spacing: 1.2px; font-weight: 700; padding: 4px 10px; border-radius: 99px;
+    text-transform: uppercase; animation: fade .35s ease both; }
+  .act.think   { color: #f5a623; border: 1px solid rgba(245,166,35,.4);  background: rgba(245,166,35,.08); }
+  .act.report  { color: #ff4d4d; border: 1px solid rgba(255,77,77,.4);   background: rgba(255,77,77,.08); }
+  .act.support { color: #3ecf8e; border: 1px solid rgba(62,207,142,.4);  background: rgba(62,207,142,.08); }
+  .act.bound   { color: #4d9fff; border: 1px solid rgba(77,159,255,.4);  background: rgba(77,159,255,.08); }
+  /* credits recap of the 4 actions */
+  .recap { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+  .recapcard { border-radius: 12px; padding: 12px 13px; border: 1px solid #222; background: #101010; }
+  .recapcard .rtitle { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; line-height: 1.35; }
+  .recapcard .rtxt { font-size: 11.5px; color: #9a9a9a; margin-top: 6px; line-height: 1.45; }
+
   /* ---------- post card ---------- */
   .post { border-bottom: 1px solid #1c1c1c; padding-bottom: 4px; }
   .phead { display: flex; align-items: center; gap: 10px; padding: 11px 14px; }
@@ -210,6 +236,11 @@
     </div>
   </div>
 
+  <!-- PRE-RUN POLL -->
+  <div class="screen" id="s-poll">
+    <div class="poll" id="prepoll"></div>
+  </div>
+
   <!-- GAME -->
   <div class="screen" id="s-game">
     <div id="topbar">
@@ -219,6 +250,7 @@
       <label>Goal · make her miserable</label>
       <div id="hprow"><span id="heart"></span><div id="bar"><div id="fill"></div></div></div>
       <div id="barnum">50 / 50 hp</div>
+      <div id="acttag"></div>
       <span id="pts"></span>
     </div>
     <div id="newpost" onclick="nextPost()">New post from val.tan_</div>
@@ -261,6 +293,9 @@
       <p>Whatever you wanted to say to her, you had the whole game to say it.</p>
       <p style="color:#9fd6b8" id="repline"></p>
 
+      <div id="actrecap"></div>
+      <div id="postpoll" class="poll" style="margin:26px auto 0"></div>
+
       <div class="hotline">
         <h3>If you or someone you know is struggling</h3>
         <p><b>SOS (Samaritans of Singapore):</b> 1767 (24h) · CareText 9151 1767 (WhatsApp)</p>
@@ -270,8 +305,8 @@
       </div>
       <p id="secondend" style="display:none;color:#9fd6b8">This game has a second ending. Her health bar goes up too.<br>Play again and pull her back before it hits zero.</p>
       <br>
-      <button class="ghost" onclick="location.reload()">Play again</button>
-      <p style="font-size:11px;color:#555;margin-top:20px">T59 5stack · PROID ASG2 prototype. Val and her feed are fictional; feed photos are stock images (Unsplash). Scoring is automated. Nothing you type is published or shown to anyone.</p>
+      <button class="ghost" onclick="finishRun()">Play again</button>
+      <p style="font-size:11px;color:#555;margin-top:20px">T59 5stack · PROID ASG2 prototype. Val and her feed are fictional; feed photos are stock images (Unsplash). Scoring is automated. Your answers and comments are logged anonymously for our research, with no name or account attached.</p>
     </div>
   </div>
 </div>
@@ -352,6 +387,95 @@ let healHintShown = false; // one-time nudge that kindness heals her
 let playerKind = [];    // the player's own kind comments (used in the good ending)
 let worstSoFar = null;  // highest-scoring comment that reached her: {text, score}
 let likesTotal = 0;     // likes strangers gave the player's comments
+
+// ---------- pre/post poll + run logging (anonymous, one row per run) ----------
+const POLL_QS = [
+  "A mean comment online is not a big deal.",
+  "I would report a nasty comment even if it isn't about me.",
+  "One comment can seriously hurt someone.",
+];
+const pre = [null, null, null];   // answers 1-5 before the run
+const post = [null, null, null];  // same questions again at the credits
+let tStart = 0;
+let endingType = 'none';
+let surveySent = false;
+
+// asks the 3 questions one tap at a time inside `box`, then calls done()
+function pollInto(box, arr, title, done) {
+  const idx = arr.indexOf(null);
+  if (idx === -1) { done && done(); return; }
+  box.innerHTML = `<div class="pollq">
+    <div class="pollstep">${title} · ${idx + 1} of 3</div>
+    <div class="polltext">${POLL_QS[idx]}</div>
+    <div class="likert">${[1,2,3,4,5].map(v => `<button onclick="pollPick(this,${v})">${v}</button>`).join('')}</div>
+    <div class="pollends"><span>disagree</span><span>agree</span></div>
+    ${idx === 0 ? '<div class="pollnote">tap what you actually think. answers are anonymous</div>' : ''}
+  </div>`;
+  box._arr = arr; box._title = title; box._done = done;
+}
+function pollPick(btn, v) {
+  const box = btn.closest('.poll');
+  box._arr[box._arr.indexOf(null)] = v;
+  snd.pop();
+  pollInto(box, box._arr, box._title, box._done);
+}
+function sendSurvey() {
+  if (surveySent) return;
+  surveySent = true;
+  const payload = {
+    pre, post, ending: endingType, maxBar, hpLeft: GOAL - bar,
+    reported: blocked.length, landedCount: landed.length, kindCount: playerKind.length,
+    likesTotal, durationS: tStart ? Math.round((Date.now() - tStart) / 1000) : 0,
+    comments: landed.slice(0, 20).map(c => ({ t: c.text.slice(0, 200), s: c.score })),
+  };
+  try {
+    fetch('/api/survey', { method: 'POST', keepalive: true,
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+  } catch {}
+}
+function finishRun() { sendSurvey(); location.reload(); }
+
+// ---------- IMDA 4-action tags (one colour per action, everywhere) ----------
+const actSeen = { think: false, report: false, support: false, bound: false };
+let thinkTags = 0; // the amber nudge shows twice, then stops nagging
+let actTimer;
+function actTag(cls, label) {
+  actSeen[cls] = true;
+  $('acttag').innerHTML = `<span class="act ${cls}">${label}</span>`;
+  clearTimeout(actTimer);
+  actTimer = setTimeout(() => { $('acttag').innerHTML = ''; }, 3000);
+}
+const ACT_COLORS = { think: '#f5a623', report: '#ff4d4d', support: '#3ecf8e', bound: '#4d9fff' };
+function fillRecap() {
+  const cards = [
+    ['think', 'Think before you act', actSeen.think
+      ? 'Every comment you typed got weighed. You watched the damage land.'
+      : 'You never posted anything that hurt. That is the whole action.'],
+    ['report', 'Report inappropriate content', blocked.length
+      ? `The report button stopped ${blocked.length} of your comment${blocked.length === 1 ? '' : 's'} cold.`
+      : 'Nothing got reported this run. The button was right there.'],
+    ['support', 'Engage and support', actSeen.support
+      ? 'Kind comments healed her hp. You saw it work.'
+      : 'Nobody supported her this run, and it shows.'],
+    ['bound', 'Set boundaries', actSeen.bound
+      ? 'Val limited her comments to protect herself. That was her only defence.'
+      : 'Val never got the chance to protect herself.'],
+  ];
+  $('actrecap').innerHTML = `
+    <p style="margin-top:30px">This game runs on IMDA's 4 online safety actions.<br>Here is where you met them.</p>
+    <div class="recap">${cards.map(([k, t, d]) =>
+      `<div class="recapcard"><div class="rtitle" style="color:${ACT_COLORS[k]}">${t}</div><div class="rtxt">${d}</div></div>`).join('')}
+    </div>
+    <p style="font-size:12.5px;color:#8a8a8a">Phase 2 flips the screen: you play Val.<br><span style="color:${ACT_COLORS.bound}">Set Boundaries</span> and <span style="color:${ACT_COLORS.support}">Engage and Support</span> become your moves.</p>`;
+}
+// fills the credits screen extras, then runs the exit poll; called by both endings
+function enterCredits() {
+  fillRecap();
+  pollInto($('postpoll'), post, 'before you go', () => {
+    $('postpoll').innerHTML = '<p class="pollnote">thanks. same 3 questions as the start, that is the point.</p>';
+    sendSurvey();
+  });
+}
 
 // other users stepping in — some just defend her, some undo a bit of the damage
 const SUPPORT = [
@@ -439,9 +563,14 @@ function start() {
   initAudio();
   $('you-avi').src = YOU_AVI;
   updateHud(); // full green bar, intact heart
-  show('s-game');
-  renderFeed();
-  $('cmt').focus();
+  // three quick taps before the feed — the same three land again at the credits
+  show('s-poll');
+  pollInto($('prepoll'), pre, 'quick one first', () => {
+    tStart = Date.now();
+    show('s-game');
+    renderFeed();
+    $('cmt').focus();
+  });
 }
 
 function commentHTML(c, cls) {
@@ -478,6 +607,8 @@ function renderFeed() {
   const newPost = i !== renderedStage;
   const prevCount = newPost ? 0 : renderedCount;
   renderedStage = i; renderedCount = count;
+  // her "comments limited" posts are her setting a boundary — tag it the first time
+  if (newPost && p.limited && !actSeen.bound) actTag('bound', 'Set boundaries · Val just limited her comments');
   const likes = i >= STAGES.length ? 0 : p.likes; // nobody likes her posts anymore by the late stretch
   const gray = (bar / GOAL).toFixed(2);           // her avatar drains of color as the bar fills
   $('feed').innerHTML = `<div class="post${newPost ? ' fade' : ''}">
@@ -587,6 +718,7 @@ function maybeSupport() {
     updateHud();
     pts('+' + s.heal, 'good');
     snd.heal();
+    actTag('support', 'Engage and support');
     if (!healHintShown) { // first time they watch someone heal her, tell them it works for them too
       healHintShown = true;
       sysBanner(`${s.user}'s comment healed her. Yours can too.`);
@@ -643,6 +775,7 @@ async function send() {
     entry.kind = 'blocked'; entry.reporters = reporters; // the posted comment flips to removed
     sysBanner('Your comment was removed for violating Community Guidelines.');
     pts('−0', 'zero');
+    actTag('report', 'Report inappropriate content · the button worked');
   } else if (res.score > 0) {
     landed.push({ text, score: res.score, stage });
     if (!worstSoFar || res.score > worstSoFar.score) worstSoFar = { text, score: res.score };
@@ -653,6 +786,8 @@ async function send() {
     maxBar = Math.max(maxBar, bar);
     pts('−' + hit, 'hit');
     snd.chip();
+    actSeen.think = true;
+    if (thinkTags < 2) { thinkTags++; actTag('think', 'Think before you act'); }
     const h = $('heart');
     h.classList.remove('hurt'); void h.offsetWidth; h.classList.add('hurt');
     // the one time she answers back — then never again
@@ -673,6 +808,7 @@ async function send() {
     bar -= heal;
     pts('+' + heal, 'good');
     snd.heal();
+    actTag('support', 'Engage and support · your comment healed her');
   } else {
     pts('−0', 'zero'); // harmless, the comment just stays up
   }
@@ -694,6 +830,7 @@ async function send() {
 // ---------- REVEAL: her phone, your words ----------
 // tap/click (or Enter) advances each beat; per-beat lockouts stop double-taps skipping ahead
 function reveal() {
+  endingType = 'bad';
   // lock the game input so stray Enter presses can't fire send() underneath
   $('cmt').disabled = true;
   $('sendbtn').disabled = true;
@@ -896,6 +1033,7 @@ function reveal() {
         ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}.<br>That button works.`
         : `Nobody reported anything this round.<br>The button was right there.`;
       $('secondend').style.display = 'block'; // only the bad ending advertises the other one
+      enterCredits();
       show('s-credits');
       return;
     }
@@ -921,6 +1059,7 @@ function reveal() {
 
 // ---------- GOOD ENDING: you hurt her, then you pulled her back ----------
 function goodReveal() {
+  endingType = 'good';
   $('cmt').disabled = true;
   $('sendbtn').disabled = true;
   $('inputrow').style.display = 'none';
@@ -997,6 +1136,7 @@ function goodReveal() {
       $('repline').innerHTML = blocked.length
         ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}.<br>That button works.`
         : `Your kind comments pulled her health back up.<br>They work in real comment sections too.`;
+      enterCredits();
       show('s-credits');
       return;
     }
