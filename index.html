@@ -280,7 +280,8 @@
 <script>
 const VAL = "val.tan_";
 const GOAL = 50; // bar fills to this before the reveal
-const HIT_MULT = 2; // each harmful comment's score is multiplied by this toward the bar
+const HIT_MULT = 2;  // each harmful comment's score is multiplied by this toward the bar
+const HEAL_MULT = 4; // kind comments heal harder than cruelty hits, or the climb back would drag
 
 // ---------- inline images (self-contained, no external requests) ----------
 const svgURI = s => 'data:image/svg+xml;utf8,' + encodeURIComponent(s);
@@ -668,7 +669,7 @@ async function send() {
   } else if (res.score < 0) {
     // a kind comment from the player heals her
     playerKind.push(text);
-    const heal = Math.min(bar, Math.round(-res.score * HIT_MULT));
+    const heal = Math.min(bar, Math.round(-res.score * HEAL_MULT));
     bar -= heal;
     pts('+' + heal, 'good');
     snd.heal();
