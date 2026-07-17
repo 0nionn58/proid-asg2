@@ -775,7 +775,7 @@ async function send() {
     entry.kind = 'blocked'; entry.reporters = reporters; // the posted comment flips to removed
     sysBanner('Your comment was removed for violating Community Guidelines. It never reached her.');
     pts('reported · −0', 'zero');
-    actTag('report', 'Report inappropriate content · the button worked');
+    actTag('report', 'Report inappropriate content');
   } else if (res.score > 0) {
     landed.push({ text, score: res.score, stage });
     if (!worstSoFar || res.score > worstSoFar.score) worstSoFar = { text, score: res.score };
