@@ -1750,7 +1750,7 @@ function caughtEnding() {
   bo.innerHTML = '';
   bo.classList.add('on');
 
-  const lines = ['you went quiet.'];
+  const lines = ['you went quiet.<br><br><span style="color:#8a8a8a;font-size:14px">no more posts. no replies. the group chat left on read.<br>this is where val was in phase 1, when her feed went dark.</span>'];
   if (vWorst) {
     lines.push(`<div style="font-size:13px;color:#888;margin-bottom:14px">the one that did the most damage:</div>
       <div class="comment" style="text-align:left;background:#101012;border:1px solid #26262a;border-radius:12px;padding:11px 12px">
@@ -1766,10 +1766,11 @@ function caughtEnding() {
         `<div>${x.n > 0 ? `<span style="color:#ff5b5b;font-weight:700">−${x.n}</span> · ` : ''}${x.t}</div>`).join('')}</div>
       <div style="font-size:13px;color:#888;margin-top:14px">the moves that refill you stayed unpressed.</div>`);
   }
-  lines.push(`${who} noticed. ` + (vDefended
-    ? 'you showed up for him once. friday morning he was at your door.'
-    : 'friday morning she was at your door.'));
-  lines.push('this is the ending where someone notices in time.<br>in real life that is not guaranteed. be the someone.<br><br><span style="color:#7ab8f5;font-size:13px">SOS 1767 · CareText 9151 1767 (WhatsApp) · TOUCHline 1800 377 2252</span>');
+  lines.push('to everyone else you just disappeared.<br><br><span style="color:#8a8a8a;font-size:14px">but going quiet is loud, if someone is paying attention.</span>');
+  lines.push(`${who} was paying attention. ` + (vDefended
+    ? 'you backed him up once this week. friday morning he was at your door.'
+    : 'she never got a reply all week. friday morning she was at your door.'));
+  lines.push('in 2023 a girl in singapore went through this exact week, and nobody got there in time.<br><br>this ending only exists because someone noticed.<br>in real life that is not guaranteed. be the someone.<br><br><span style="color:#7ab8f5;font-size:13px">SOS 1767 · CareText 9151 1767 (WhatsApp) · TOUCHline 1800 377 2252</span>');
 
   let i = 0;
   const step = () => {
