@@ -1083,7 +1083,6 @@ function reveal() {
           </div>
           <div id="apmsgs"></div>
           <div class="aprow"><span id="aptype" style="flex:1;font-size:14px;color:#f5f5f5;min-height:19px"></span><span style="color:#0095f6;font-weight:600;font-size:14px">Send</span></div>
-          <div id="apafter"></div>
         </div>`;
         later(() => {
           typewrite($('aptype'), SORRY, 65, () => {
@@ -1097,31 +1096,32 @@ function reveal() {
               $('apsub').style.visibility = 'visible';
               snd.heal();
             }, 2100);
-            // the only move left is deleting what you wrote — and it changes nothing
-            if (worstSoFar) {
-              later(() => {
-                $('apafter').innerHTML = `<div style="margin-top:40px;animation:fade .7s ease both">
-                  <div class="comment"><img class="cavatar" src="${YOU_AVI}" alt=""><div class="cbody">
-                    <div class="ctext"><b>${ME}</b>${esc(worstSoFar.text)}</div>
-                    <div class="cmeta" style="color:#ff5b5b">Deleting…</div>
-                  </div></div></div>`;
-              }, 3600);
-              later(() => {
-                $('apafter').innerHTML = `<div style="margin-top:40px">
-                  <div class="comment removed"><div class="cavatar">🗑</div><div class="cbody"><div class="ctext">Comment deleted.</div></div></div>
-                  <p class="dim" style="text-align:center;margin-top:30px;animation:fade .9s ease both">She read it three weeks ago. Deleting it now does nothing.</p>
-                </div>`;
-              }, 5500);
-            }
-            const t0 = worstSoFar ? 7800 : 3600;
-            later(() => {
-              $('apafter').innerHTML += `
-                <p class="dim" style="text-align:center;margin-top:34px;animation:fade .9s ease both">Every cruel comment got to her on time.</p>
-                <p class="dim" style="text-align:center;margin-top:8px;animation:fade .9s ease 1.1s both">The only one that never reached her is this sorry.</p>`;
-            }, t0);
-            later(() => { locked = false; hint.style.display = 'block'; }, t0 + 2600);
+            later(() => { locked = false; hint.style.display = 'block'; }, 2900);
           });
         }, 900);
+      } },
+    // the only move left is deleting what you wrote — and it changes nothing
+    ...(worstSoFar ? [{ lock: SELF, render() {
+        inner.innerHTML = `<div class="fade" style="padding-top:90px">
+          <div class="comment"><img class="cavatar" src="${YOU_AVI}" alt=""><div class="cbody">
+            <div class="ctext"><b>${ME}</b>${esc(worstSoFar.text)}</div>
+            <div class="cmeta" style="color:#ff5b5b">Deleting…</div>
+          </div></div>
+          <div id="apafter"></div>
+        </div>`;
+        later(() => {
+          $('apafter').innerHTML = `
+            <div class="comment removed" style="margin-top:26px"><div class="cavatar">🗑</div><div class="cbody"><div class="ctext">Comment deleted.</div></div></div>
+            <p class="dim" style="text-align:center;margin-top:30px;animation:fade .9s ease both">She read it three weeks ago. Deleting it now does nothing.</p>`;
+          later(() => { locked = false; hint.style.display = 'block'; }, 1600);
+        }, 2200);
+      } }] : []),
+    { lock: SELF, render() {
+        inner.innerHTML = `<div class="center fade" style="padding-top:130px">
+          <p class="dim" style="animation:fade .9s ease both">Every cruel comment got to her on time.</p>
+          <p class="dim" style="margin-top:10px;animation:fade .9s ease 1.4s both">The only one that never reached her is this sorry.</p>
+        </div>`;
+        later(() => { locked = false; hint.style.display = 'block'; }, 2600);
       } },
     { lock: 2600, render() {
         inner.innerHTML = `<div class="center fade" style="padding-top:110px"><p class="dim">A 15-year-old in Singapore went through this in 2023.<br><br>Schoolmates posted comments about her online. She fell into depression and took her own life.<br><br>Her mum's post about it went viral two years later.</p></div>`;
@@ -1157,9 +1157,8 @@ function reveal() {
     setTimeout(() => { inner.classList.remove('fadeout'); renderBeat(); }, 300);
   };
 
-  // taps and keys inside the apology composer belong to it, never to beat-advance
-  const onTap = (e) => { if (e.target.closest && e.target.closest('#apology')) return; advance(); };
-  const onKey = (e) => { if (e.target && e.target.id === 'apinput') return; if (e.key === 'Enter' || e.key === ' ') advance(); };
+  const onTap = () => advance();
+  const onKey = (e) => { if (e.key === 'Enter' || e.key === ' ') advance(); };
   const cleanup = () => {
     document.removeEventListener('click', onTap);
     document.removeEventListener('keydown', onKey);
@@ -1453,6 +1452,13 @@ function vTap(e) {
   const rect = $('vstage').getBoundingClientRect();
   if ((e.clientX - rect.left) < rect.width * 0.28) vBack(); else vAdvance();
 }
+// keyboard mirrors the taps: enter / space / → go on, ← looks back
+document.addEventListener('keydown', (e) => {
+  if (!$('s-val').classList.contains('active') || vOver) return;
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON')) return;
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); vAdvance(); }
+  else if (e.key === 'ArrowLeft') vBack();
+});
 function vAdvance() {
   if (vOver) return;
   const c = vDeck[vIdx];
@@ -1607,12 +1613,12 @@ async function vSendReply() {
   }
 }
 function vBeat4() {
-  card({ type: 'story', time: 'wednesday · 6:47 pm', text: 'remember <b>kai</b>? he stuck up for you in your comments. tonight they turned on him for it.' });
+  card({ type: 'story', time: 'wednesday · 6:47 pm', text: '<b>kaifromE12</b> — the one who kept telling the pile-on in your comments to stop. tonight the same accounts found his page.' });
   card({ type: 'post',
-    p: { bg: 'linear-gradient(135deg,#233042,#131a24)', body: "hot take: the ppl living in val's comments need hobbies" },
-    who: { name: 'kai', avi: supportAvi['kaifromE12'], sub: 'his post · 2h ago' },
-    comments: [{ user: HANDLES[2], text: 'white knight alert 💀', score: 2 }, { user: HANDLES[4], text: `ur next lol @${VAL}`, score: 2 }] });
-  card({ type: 'story', text: 'you are not even the target here, and it still drains you. watching someone get punished for helping you has a cost too.', options: [
+    p: { bg: 'linear-gradient(135deg,#233042,#131a24)', body: "the ppl spamming val's comments need to log off. she did nothing to u." },
+    who: { name: 'kaifromE12', avi: supportAvi['kaifromE12'], sub: 'his post · 2h ago' },
+    comments: [{ user: HANDLES[2], text: 'white knight alert 💀', score: 2 }, { user: HANDLES[4], text: 'defending her?? that somehow makes u worse than she is lol', score: 2 }] });
+  card({ type: 'story', text: 'none of that was aimed at you — and your hp still dropped. watching someone get attacked for sticking up for you costs you too.', options: [
     { label: 'Back him up', sub: 'you know exactly how this feels', fn() {
         vUsedSupport++; vDefended = true; actSeen.support = true;
         vResolve([ result(`<span class="act support">${ACT_LABEL.support}</span><br><br>you replied: "ignore them kai. they did the same to me. says nothing about u." he liked it ten seconds later.`, () => vHeal(3), vBeat5) ]);
