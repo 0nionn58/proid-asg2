@@ -243,9 +243,15 @@
   #s-val.active { display: flex; flex-direction: column; overflow: hidden; }
   #vgoal label { color: #4d9fff; }
   /* phase 2 plays as an instagram-story deck: one card at a time, tap to move sideways */
-  #vbars { display: flex; gap: 4px; padding: 9px 14px 5px; }
-  .vbar { flex: 1; height: 2.5px; background: #333; border-radius: 2px; overflow: hidden; }
-  .vbar > i { display: block; height: 100%; width: 0; background: #eee; transition: width .35s ease; }
+  /* the week tracker: five fixed segments, mon-fri. past = dim fill, now = bright, ahead = dark */
+  #vbars { display: flex; gap: 6px; padding: 10px 14px 6px; }
+  .vday-seg { flex: 1; }
+  .vday-seg i { display: block; height: 2.5px; border-radius: 2px; background: #2a2a2e; transition: background .35s ease; }
+  .vday-seg span { display: block; text-align: center; margin-top: 5px; font-size: 8.5px; letter-spacing: 1.5px; color: #4a4a4e; text-transform: uppercase; transition: color .35s ease; }
+  .vday-seg.past i { background: #8a8a8e; }
+  .vday-seg.past span { color: #6a6a6e; }
+  .vday-seg.now i { background: #fafafa; }
+  .vday-seg.now span { color: #fafafa; }
   #vstage { position: relative; flex: 1; min-height: 0; overflow: hidden; cursor: pointer; }
   #vcards { position: absolute; inset: 0; }
   .vcard { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
@@ -1371,6 +1377,7 @@ function startPhase2() {
   vUsedBound = 0; vUsedSupport = 0; vTraps = [];
   vReachedOut = vDefended = vReported = false;
   vMuted = false; vLimited = 0; vFinePending = false;
+  vDayIdx = 0;
   vClear();
   hateQueue = buildHate();
   vWorst = hateQueue.length ? hateQueue.reduce((a, b) => b.score > a.score ? b : a) : null;
@@ -1391,8 +1398,13 @@ function card(o) { vDeck.push(o); return o; }
 function vResolve(cards) { vDeck.splice(vIdx + 1, 0, ...cards); vShowCard(vIdx + 1); }
 function result(text, effect, next) { return { type: 'story', text, effect, next }; }
 
-function renderBars() {
-  $('vbars').innerHTML = vDeck.map((_, i) => `<div class="vbar"><i style="width:${i <= vIdx ? 100 : 0}%"></i></div>`).join('');
+// the week is the progress: five fixed segments, mon-fri. cards get spliced in and out
+// mid-scene, so nothing here ever counts cards — only days fill in, and never backwards.
+const V_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+let vDayIdx = 0;
+function renderWeek() {
+  $('vbars').innerHTML = V_DAYS.map((d, i) =>
+    `<div class="vday-seg${i < vDayIdx ? ' past' : i === vDayIdx ? ' now' : ''}"><i></i><span>${d}</span></div>`).join('');
 }
 function vCommentHTML(cc, isNew) {
   const blur = vMuted && cc.user === HANDLES[0];
@@ -1430,7 +1442,7 @@ function vShowCard(i, back) {
   vIdx = i;
   const c = vDeck[i];
   $('vcards').innerHTML = `<div class="vcard vc-${c.type}${back ? ' back' : ''}">${vCardHTML(c)}</div>`;
-  renderBars();
+  renderWeek();
   if (!c.entered) {
     c.entered = true;
     if (c.type === 'post' && c.comments) c.comments.forEach(cc => { if (!(vMuted && cc.user === HANDLES[0])) vDrain(vDmg(cc.score) * (c.night ? 2 : 1)); });
@@ -1529,6 +1541,7 @@ function vHud() {
 }
 // ---------- the beats (each builds a short deck of cards) ----------
 function vBeat1() {
+  vDayIdx = 0;
   card({ type: 'story', time: 'monday · 7:43 am', text: 'friday is 4 days away. the comments have not stopped since your first post.' });
   card({ type: 'post', p: STAGES[0], comments: pull(2), options: [
     { label: 'Limit who can comment', sub: 'only people you follow can reply', fn() {
@@ -1546,6 +1559,7 @@ function vBeat1() {
   ] });
 }
 function vBeat2() {
+  vDayIdx = 1;
   card({ type: 'story', time: 'tuesday · 3:20 pm', text: 'a message from your friend jasmine.' });
   card({ type: 'dm', who: 'jasmine.oy', lines: [{ text: 'hey. i saw the comments on ur post. u ok? im here if u wanna talk 🫶' }], options: [
     { label: 'Tell her the truth', sub: 'she asked. she means it', fn() {
@@ -1565,6 +1579,7 @@ function vBeat2() {
   ] });
 }
 function vBeat3() {
+  vDayIdx = 2;
   if (vLimited > 0) vLimited--;
   if (vFinePending) {
     vFinePending = false;
@@ -1613,6 +1628,7 @@ async function vSendReply() {
   }
 }
 function vBeat4() {
+  vDayIdx = 2;
   card({ type: 'story', time: 'wednesday · 6:47 pm', text: '<b>kaifromE12</b> — the one who kept telling the pile-on in your comments to stop. tonight the same accounts found his page.' });
   card({ type: 'post',
     p: { bg: 'linear-gradient(135deg,#233042,#131a24)', body: "the ppl spamming val's comments need to log off. she did nothing to u." },
@@ -1629,6 +1645,7 @@ function vBeat4() {
   ] });
 }
 function vBeat5() {
+  vDayIdx = 2;
   const opts = [
     { label: 'Put the phone down', sub: 'it will still be there tomorrow', fn() {
         vUsedBound++; actSeen.bound = true;
@@ -1658,6 +1675,7 @@ function vBeat5() {
   else s.options = opts;
 }
 function vBeat6() {
+  vDayIdx = 3;
   card({ type: 'story', time: 'thursday · dinner', text: 'no phone at the table. mum asked why you have been so quiet lately.', options: [
     { label: 'Tell her what has been happening', sub: 'all of it, from the first comment', fn() {
         vUsedSupport++; vReachedOut = true; actSeen.support = true;
@@ -1671,6 +1689,7 @@ function vBeat6() {
   ] });
 }
 function vSpiral() {
+  vDayIdx = 4;
   card({ type: 'story', time: 'friday · 3:04 am', text: 'you are back on the app. nobody knows you are awake.' });
   const cc = pull(3);
   card({ type: 'post', head: 'friday · 3 am', p: { bg: '#0c0c0e', body: 'cant sleep' }, comments: cc, night: true,
@@ -1681,7 +1700,7 @@ function vSpiral() {
 // ---------- endings. rule: the victim POV never punishes help-seeking, and hp 0 is always interrupted by a person ----------
 function vEndingBeat() {
   if (vOver) return;
-  vDeck = []; vIdx = 0;
+  vDeck = []; vIdx = 0; vDayIdx = 4;
   // winning takes a practice, not a gesture: healthy hp, two boundaries, two supports, and one real person told
   vGoodEnd = vhp > 30 && vUsedBound >= 2 && vUsedSupport >= 2 && vReachedOut;
   p2Done = true;
