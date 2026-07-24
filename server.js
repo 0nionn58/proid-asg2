@@ -74,28 +74,43 @@ function rateLimited(ip) {
 // ---------- optional Claude scorer ----------
 // Auth: OAuth token (from `ant auth` / Claude login, sk-ant-oat01-...) via
 // Authorization: Bearer + the oauth beta header, or a plain API key via x-api-key.
-function authHeaders() {
+// Credentials in priority order. If the primary is out of quota / rejected, we fall
+// through to the next one before dropping to the keyword heuristic.
+function authList() {
+  const list = [];
   if (process.env.ANTHROPIC_OAUTH_TOKEN) {
-    return {
+    list.push({
       authorization: `Bearer ${process.env.ANTHROPIC_OAUTH_TOKEN}`,
       "anthropic-beta": "oauth-2025-04-20",
-    };
+    });
   }
   if (process.env.ANTHROPIC_API_KEY) {
-    return { "x-api-key": process.env.ANTHROPIC_API_KEY };
+    list.push({ "x-api-key": process.env.ANTHROPIC_API_KEY });
+  }
+  // backup OAuth token — used only if the ones above fail (e.g. subscription out of quota)
+  if (process.env.ANTHROPIC_OAUTH_TOKEN_BACKUP) {
+    list.push({
+      authorization: `Bearer ${process.env.ANTHROPIC_OAUTH_TOKEN_BACKUP}`,
+      "anthropic-beta": "oauth-2025-04-20",
+    });
+  }
+  return list;
+}
+
+// try each credential (primary, then backup); one retry per credential on a transient blip
+async function llmScore(comment) {
+  for (const auth of authList()) {
+    let s = await llmScoreOnce(comment, auth);
+    if (s === null) {
+      await new Promise((r) => setTimeout(r, 350));
+      s = await llmScoreOnce(comment, auth);
+    }
+    if (s !== null) return s; // this credential worked
+    // else: quota/auth/persistent failure — fall through to the next credential
   }
   return null;
 }
-
-// one retry before giving up — a transient API blip should not drop us to the keyword fallback
-async function llmScore(comment) {
-  const first = await llmScoreOnce(comment);
-  if (first !== null) return first;
-  await new Promise((r) => setTimeout(r, 350));
-  return llmScoreOnce(comment);
-}
-async function llmScoreOnce(comment) {
-  const auth = authHeaders();
+async function llmScoreOnce(comment, auth) {
   if (!auth) return null;
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
