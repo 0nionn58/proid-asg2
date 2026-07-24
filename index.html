@@ -261,6 +261,9 @@
   .vcard.back { animation: cardback .3s ease both; }
   @keyframes cardback { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
   .vcard.vc-post, .vcard.vc-dm, .vcard.vc-reply { justify-content: flex-start; padding-top: 22px; }
+  /* keep card children at natural height so the card scrolls instead of clipping the last comment */
+  .vc-post > *, .vc-dm > *, .vc-reply > *, .vc-pinned > * { flex-shrink: 0; }
+  #vstage .vcard { scroll-padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
   .vtaphint { position: absolute; bottom: 10px; right: 16px; color: #666; font-size: 11px; letter-spacing: 1px;
     animation: pulse 1.8s ease-in-out infinite; pointer-events: none; z-index: 2; }
   #vstage .pimg { max-height: 24vh; border-radius: 10px; }
@@ -551,20 +554,20 @@ const ACT_LABEL = { think: 'Think before you act', report: 'Report inappropriate
 function fillRecap() {
   const reportTxt = blocked.length
     ? `Someone reported ${blocked.length === 1 ? 'one' : blocked.length} of your comments before she ever saw ${blocked.length === 1 ? 'it' : 'them'}. That button works.`
-    : 'Nothing got reported this run. The button was right there.';
+    : 'No reports this run. Reporting is what takes harmful comments down.';
   const supportTxt = endingType === 'good'
     ? 'Your kind comments pulled her health back up. They work in real comment sections too.'
-    : actSeen.support ? 'Kind comments healed her hp. You saw it work.' : 'Nobody supported her this run, and it shows.';
+    : actSeen.support ? 'Kind comments healed her hp. You saw it work.' : 'A supportive reply can heal someone, not only hurt them.';
   const cards = [
     ['think', actSeen.think
       ? 'Every comment you typed got weighed before it landed.'
       : 'You never posted anything that hurt. That is the whole action.'],
     ['report', p2Done && (vLedger.reported || vLedger.jasmineHelps) ? 'This time you pressed the button yourself. You watched the comment disappear.' : reportTxt],
     ['support', p2Done
-      ? (vSupport ? 'You let people in. That is what kept Val here.' : 'People reached out to Val. She never let them in.')
+      ? (vSupport ? 'You told someone what was going on. That is what helped most.' : 'People offered to help. Letting them in is what helps most.')
       : supportTxt],
     ['bound', p2Done
-      ? (vBound ? 'You set the boundaries yourself this time. They held.' : 'The boundary moves were right there. They stayed unused.')
+      ? (vBound ? 'You set the boundaries yourself this time. They held.' : 'Boundary tools like restrict and mute are there any time you need them.')
       : actSeen.bound
       ? 'Val limited her comments to protect herself. It was her only defence.'
       : 'Val never got the chance to protect herself.'],
@@ -1540,7 +1543,7 @@ function vHud() {
 // your choice = one result card. nothing is deferred, nothing lands later.
 function vBeat1() { // monday — Report
   vDayIdx = 0;
-  card({ type: 'story', time: 'monday · 7:43 am', text: 'the comments have not stopped since your first post. friday is 4 days away.' });
+  card({ type: 'story', time: 'monday · 7:43 am', text: 'the comments did not stop over the weekend. it is monday, four days to friday.' });
   const cc = pull(2);
   const worstHere = cc.reduce((a, b) => (b.score > a.score ? b : a), cc[0] || { text: '', score: 0 });
   card({ type: 'post', p: STAGES[0], comments: cc, options: [
@@ -1552,7 +1555,7 @@ function vBeat1() { // monday — Report
         vLedger.scrolled = true;
         vResolve([
           { type: 'post', head: 'you keep scrolling', p: STAGES[0], comments: pull(2) },
-          result('you read every single one. it costs them nothing to keep going. it costs you.', null, vBeat2),
+          result('you read through all of them. it does not make the day any easier.', null, vBeat2),
         ]);
       } },
   ] });
@@ -1561,8 +1564,8 @@ function vBeat2() { // tuesday — Engage & support (jasmine)
   vDayIdx = 1;
   card({ type: 'story', time: 'tuesday · 3:20 pm',
     text: vLedger.reported
-      ? 'the comment you reported is gone. one less thing to reread. now your friend jasmine is texting you.'
-      : 'you fell asleep in the thread and woke up still in it. now your friend jasmine is texting you.' });
+      ? 'the comment you reported is gone. your friend jasmine is texting you.'
+      : 'you were on your phone late again. your friend jasmine is texting you.' });
   card({ type: 'dm', who: 'jasmine.oy', lines: [{ text: 'hey. i saw the comments on ur post. u ok? im here if u wanna talk 🫶' }], options: [
     { label: 'Tell her the truth', sub: 'she asked. she means it', fn() {
         vSupport++; vReachedOut = true; vLedger.toldJasmine = true; actSeen.support = true;
@@ -1573,10 +1576,10 @@ function vBeat2() { // tuesday — Engage & support (jasmine)
             options: [
               { label: 'Yes — report them together', sub: 'two reports beat one', fn() {
                   vLedger.jasmineHelps = true; actSeen.report = true;
-                  vResolve([ result(`<span class="act support">${ACT_LABEL.support}</span><br><br>you split the list and reported everything. some are already gone. it is lighter when someone carries it with you.`, () => vHeal(4), vBeat3) ]);
+                  vResolve([ result(`<span class="act support">${ACT_LABEL.support}</span><br><br>you reported the rest together. some are already gone. it is easier with someone else on it.`, () => vHeal(4), vBeat3) ]);
                 } },
               { label: '"thanks. dont make it a thing"', sub: 'quieter feels safer', fn() {
-                  vResolve([ result(`<span class="act support">${ACT_LABEL.support}</span><br><br>"ok. but im here." even just saying it out loud helped.`, () => vHeal(3), vBeat3) ]);
+                  vResolve([ result(`<span class="act support">${ACT_LABEL.support}</span><br><br>"ok. but im here." telling her helped a bit.`, () => vHeal(3), vBeat3) ]);
                 } },
             ] },
         ]);
@@ -1585,7 +1588,7 @@ function vBeat2() { // tuesday — Engage & support (jasmine)
         vLedger.postedFine = true;
         vResolve([
           { type: 'post', p: { bg: 'linear-gradient(135deg,#26262b,#141417)', body: 'im fine guys 😅 stop dming me' } },
-          result('nobody questions "im fine". pretending it is fine is not a boundary — nobody can help with what they cannot see.', () => vDrain(3), vBeat3),
+          result('saying you are fine ends the conversation. it also means nobody knows to help.', () => vDrain(3), vBeat3),
         ]);
       } },
   ] });
@@ -1593,9 +1596,9 @@ function vBeat2() { // tuesday — Engage & support (jasmine)
 function vBeat3() { // wednesday — Set boundaries (or learn why replying feeds it)
   vDayIdx = 2;
   card({ type: 'story', time: 'wednesday · 8:15 am',
-    text: vLedger.jasmineHelps ? 'quieter this morning — the reports worked. but the account that keeps coming back is back again.'
-      : vLedger.postedFine ? 'the same account is back. "im fine" did not slow it down. it gave them new material.'
-      : 'a new morning. the same account is back.' });
+    text: vLedger.jasmineHelps ? 'quieter this morning after the reports. but the same account is back again.'
+      : vLedger.postedFine ? 'the same account is back. saying you were fine did not stop it.'
+      : 'wednesday. the same account is back.' });
   const cc = pull(vLedger.jasmineHelps ? 1 : 2);
   if (vLedger.postedFine) cc.push({ user: HANDLES[3], text: '"im fine" she says 💀 sure u are', score: 4 });
   if (vLedger.toldJasmine) cc.push({ user: 'jasmine.oy', text: 'im with val. keep it up and ur getting reported too', score: 0, support: true });
@@ -1603,7 +1606,7 @@ function vBeat3() { // wednesday — Set boundaries (or learn why replying feeds
   card({ type: 'post', p: STAGES[2], comments: cc, options: [
     { label: 'Restrict the account', sub: 'you never have to see them again', fn() {
         vBound++; vLedger.restricted = true; actSeen.bound = true;
-        vResolve([ result(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>${HANDLES[0]} is restricted. from this second on, nothing they write reaches you.`, () => vHeal(3), vBeat4) ]);
+        vResolve([ result(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>${HANDLES[0]} is restricted. what they post will not show up for you anymore.`, () => vHeal(3), vBeat4) ]);
       } },
     { label: 'Reply to them', sub: 'they cannot just say that', fn() {
         vResolve([ { type: 'reply', last: target } ]);
@@ -1621,25 +1624,25 @@ function vSendReply() {
   c.done = true;
   snd.pop();
   $('vreplyzone').innerHTML = `<div class="comment valreply" style="margin-top:14px"><img class="cavatar" src="${VAL_AVI}" alt=""><div class="cbody"><div class="ctext"><b>${VAL}</b>${esc(text)}</div><div class="cmeta">Just now</div></div></div>`;
-  vDeck.splice(vIdx + 1, 0, result('replying felt like doing something. but a reply is content too — there is already a screenshot, and the pile-on has something new to feed on.', () => vDrain(3), vBeat4));
+  vDeck.splice(vIdx + 1, 0, result('replying felt like doing something. but it just gives them a reaction to pass around.', () => vDrain(3), vBeat4));
   $('vtaphint').style.display = 'block';
 }
 function vBeat4() { // wednesday night — Set boundaries (put it down)
   vDayIdx = 2;
-  const s0 = card({ type: 'story', time: 'wednesday · 11:58 pm', text: 'you should be asleep. the app is still open.' });
+  const s0 = card({ type: 'story', time: 'wednesday · 11:58 pm', text: 'it is late. the app is still open.' });
   const pin = vLedger.clappedBack
-    ? { label: 'your reply is making rounds', user: VAL, avi: VAL_AVI, text: vLedger.replyText || '', note: 'screenshotted and reposted. it stopped being yours the second you sent it.' }
+    ? { label: 'your reply is making rounds', user: VAL, avi: VAL_AVI, text: vLedger.replyText || '', note: 'someone screenshotted your reply and reposted it.' }
     : vWorst
-    ? { label: 'you keep coming back to this one', user: vWorst.user, avi: hAvi[vWorst.user], text: vWorst.text, note: 'you have read it more times than you can count.' }
+    ? { label: 'you keep coming back to this one', user: vWorst.user, avi: hAvi[vWorst.user], text: vWorst.text, note: 'you keep opening it.' }
     : null;
   const opts = [
     { label: 'Put the phone down', sub: 'it will still be there tomorrow', fn() {
         vBound++; vLedger.sleptWed = true; actSeen.bound = true;
-        vResolve([ result(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>you slept. eight hours where none of them could reach you.`, () => vHeal(4), vBeat5) ]);
+        vResolve([ result(`<span class="act bound">${ACT_LABEL.bound}</span><br><br>you put the phone down and slept. it helped.`, () => vHeal(4), vBeat5) ]);
       } },
     { label: 'Read it one more time', sub: 'it is pinned in your head anyway', fn() {
         vLedger.rereadWorst = true;
-        vResolve([ result('same words. they hit the same every time. rereading changes nothing except you.', () => vDrain(vWorst ? vDmg(vWorst.score) : 4), vBeat5) ]);
+        vResolve([ result('same words as before. reading it again does not help.', () => vDrain(vWorst ? vDmg(vWorst.score) : 4), vBeat5) ]);
       } },
   ];
   if (pin) card({ type: 'pinned', pin, options: opts });
@@ -1649,44 +1652,41 @@ function vBeat5() { // thursday — Engage & support (a real adult)
   vDayIdx = 3;
   card({ type: 'story', time: 'thursday · dinner',
     text: vReachedOut
-      ? 'no phone at the table. mum asked why you have been so quiet. jasmine knows — mum still does not.'
-      : 'no phone at the table. mum asked why you have been so quiet. nobody knows about any of it. she is looking right at you.',
+      ? 'dinner, no phones. mum asks why you have been quiet lately.'
+      : 'dinner, no phones. mum asks why you have been quiet lately. she has noticed something is off.',
     options: [
     { label: 'Tell her everything', sub: 'all of it, from the first comment', fn() {
         vSupport++; vReachedOut = true; vLedger.toldMum = true; actSeen.support = true;
-        vResolve([ result(`<span class="act support">${ACT_LABEL.support}</span><br><br>she did not fully get it. she sat with you anyway. that was enough.`, () => vHeal(4), vEndingBeat) ]);
+        vResolve([ result(`<span class="act support">${ACT_LABEL.support}</span><br><br>she did not fully get it. she stayed with you anyway.`, () => vHeal(4), vEndingBeat) ]);
       } },
     { label: 'Say you are just tired', sub: 'easier than explaining', fn() {
-        vResolve([ result('she believed you. the room went quiet again. you carry it alone another night.', () => vDrain(2), vEndingBeat) ]);
+        vResolve([ result('she believed you. dinner moved on. you kept it to yourself.', () => vDrain(2), vEndingBeat) ]);
       } },
   ] });
 }
 
 // ---------- endings. rule: the victim POV never punishes help-seeking, and hp 0 is always interrupted by a person ----------
-function vEndingBeat() { // friday — the week ends the way you shaped it
+function vEndingBeat() { // friday — the week ends by what you used
   if (vOver) return;
   vDeck = []; vIdx = 0; vDayIdx = 4;
-  // winning takes a practice, not one gesture: decent hp, a real person told, two protective moves
-  vGoodEnd = vhp > 30 && vReachedOut && (vBound + vSupport) >= 2;
   p2Done = true;
+  // one plain line of credit for each of the four actions the player actually used
   const used = [];
-  if (vLedger.reported || vLedger.jasmineHelps) used.push(`<span class="act report">${ACT_LABEL.report}</span>`);
-  if (vBound > 0) used.push(`<span class="act bound">${ACT_LABEL.bound}</span>`);
-  if (vSupport > 0) used.push(`<span class="act support">${ACT_LABEL.support}</span>`);
+  if (vLedger.reported || vLedger.jasmineHelps) used.push(`<span class="act report">${ACT_LABEL.report}</span> — you reported the worst of it, and some of it came down.`);
+  if (vBound > 0) used.push(`<span class="act bound">${ACT_LABEL.bound}</span> — you set boundaries, so less of it got to you.`);
+  if (vSupport > 0) used.push(`<span class="act support">${ACT_LABEL.support}</span> — you told someone, so you were not dealing with it alone.`);
+  vGoodEnd = used.length >= 1; // survey: made it through and used at least one of the actions
   const cont = [{ label: 'Continue', fn() { p2Credits(); } }];
-  if (vGoodEnd) {
+  if (used.length >= 1) {
     card({ type: 'post', head: 'friday · 4:56 pm',
-      p: { bg: 'linear-gradient(135deg,#2b4a3d,#17251f)', body: vLedger.toldMum && vLedger.toldJasmine ? 'made it to friday. mum knows. jas knows. still here 🫶' : 'made it to friday. still here. thanks to the ppl who showed up 🫶' },
-      comments: vLedger.toldJasmine ? [{ user: 'jasmine.oy', text: 'and im not going anywhere 🫶', score: 0, support: true }] : [] });
+      p: { bg: 'linear-gradient(135deg,#2b4a3d,#17251f)', body: 'made it to friday. still here.' },
+      comments: vLedger.toldJasmine ? [{ user: 'jasmine.oy', text: 'glad ur still here 🫶', score: 0, support: true }] : [] });
     card({ type: 'story', head: '', options: cont,
-      text: `you finish the week at <b>${vhp} hp</b>. not untouched. still here.<br><br>what got you through:<br>${used.join('<br>')}<br><br>none of them deleted the hate. they made it survivable. that is the whole point.<br><br><span style="color:#8a8a8a;font-size:13px">IMH's national youth mental health study (2024) found about 1 in 3 young people in singapore reported severe symptoms of depression, anxiety or stress. the ones who cope are rarely the ones who cope alone.</span>` });
+      text: `you got to friday at <b>${vhp} hp</b>.<br><br>what helped:<br>${used.join('<br>')}<br><br>none of it deleted the comments. it made the week easier to get through, and you were not on your own.<br><br><span style="color:#8a8a8a;font-size:13px">IMH's national youth mental health study (2024) found about 1 in 3 young people in singapore report severe stress, anxiety or low mood. using even one of these actions is what makes a week like this easier to carry.</span>` });
   } else {
-    const why = !vReachedOut ? 'you never told a single person. the whole week, nobody knew.'
-      : (vBound + vSupport) < 2 ? 'you mostly faced it alone. the buttons and the people were there every day.'
-      : 'too many nights went back to the feed. every one of them cost you.';
-    card({ type: 'post', head: 'friday · 4:56 pm', p: { bg: '#101012', body: vhp <= 12 ? 'made it to friday.' : 'made it to friday. barely.' } });
+    card({ type: 'post', head: 'friday · 4:56 pm', p: { bg: '#101012', body: 'made it to friday.' } });
     card({ type: 'story', head: '', options: cont,
-      text: `you finish the week at <b>${vhp} hp</b>.<br><br>${why}<br><br><span style="color:#8a8a8a;font-size:13px">in 2023, a 15-year-old in singapore lived a week like this after schoolmates posted about her online. nobody knew how heavy it was until it was too late.</span><br><br>there is a version of this week where you end it stronger. play her side again and find it.` });
+      text: `you got to friday at <b>${vhp} hp</b>, but you went through the whole week on your own.<br><br>reporting a comment, setting a boundary, or telling one person were there every day. any one of them takes some of the weight off.<br><br><span style="color:#8a8a8a;font-size:13px">in 2023 a 15-year-old in singapore went through a week like this after classmates posted about her online. these four actions exist so it does not have to be carried alone.</span><br><br>try the week again and use one of them.` });
   }
   vShowCard(0);
 }
@@ -1713,11 +1713,11 @@ function caughtEnding() {
   if (vLedger.clappedBack) did.push('fought back alone');
   if (vLedger.rereadWorst) did.push('reread the worst of it at midnight');
   if (did.length) lines.push(`you ${did.join('. you ')}.<br><br><span style="color:#8a8a8a;font-size:14px">not once did you hand any of it to someone else to carry.</span>`);
-  lines.push('to everyone else you just disappeared.<br><br><span style="color:#8a8a8a;font-size:14px">but going quiet is loud, if someone is paying attention.</span>');
+  lines.push('to everyone else, you just went quiet.<br><br><span style="color:#8a8a8a;font-size:14px">but going quiet says something too, if someone is watching for it.</span>');
   lines.push('jasmine was paying attention. ' + (vLedger.toldJasmine
     ? 'she knew how bad it was — and when you went quiet, she knew what it meant. friday morning she was at your door.'
     : 'she never got a real answer from you all week. friday morning she was at your door.'));
-  lines.push('in 2023 a girl in singapore went through this exact week, and nobody got there in time.<br><br>this ending only exists because someone noticed.<br>in real life that is not guaranteed. be the someone.<br><br><span style="color:#7ab8f5;font-size:13px">SOS 1767 · CareText 9151 1767 (WhatsApp) · TOUCHline 1800 377 2252</span>');
+  lines.push('in 2023 a girl in singapore went through a week like this, and help did not reach her in time.<br><br>here, someone noticed and showed up. in real life that is not guaranteed — so if a friend goes quiet, check on them.<br><br><span style="color:#7ab8f5;font-size:13px">SOS 1767 · CareText 9151 1767 (WhatsApp) · TOUCHline 1800 377 2252</span>');
 
   // tap to advance — each beat waits for the player, nothing moves on its own
   let i = 0, locked = true;
