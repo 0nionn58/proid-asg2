@@ -1452,8 +1452,10 @@ function vShowCard(i, back) {
     c.entered = true;
     // hp changes at exactly two moments. moment one: comments landing — one summed hit per card
     if (c.type === 'post' && c.comments) {
+      // capped per card, and never lethal — only a choice can end the week
       const dmg = c.comments.reduce((a, cc) => a + (cc.score > 0 ? vDmg(cc.score) : 0), 0);
-      if (dmg) vDrain(dmg);
+      const hit = Math.min(dmg, 15, vhp - 1);
+      if (hit > 0) vDrain(hit);
     }
     if (c.type === 'dm') { const last = c.lines[c.lines.length - 1]; if (last && !last.mine) snd.ding(); }
     if (c.effect) c.effect(); // moment two: the result card right after your choice
