@@ -1500,7 +1500,7 @@ function vRenderChoice(c) {
     opts.map((o, i) => `<button class="move" onclick="vChoose(${i})">${o.label}${o.sub ? `<small>${o.sub}</small>` : ''}</button>`).join('') + `</div>`;
 }
 function vChoose(i) { if (vOver) return; const o = window._vopts[i]; $('vmoves').innerHTML = ''; snd.pop(); o.fn(); }
-const vDmg = s => Math.max(2, Math.min(8, s));
+const vDmg = s => Math.max(3, Math.min(9, s + 2));
 function vDrain(n) {
   if (vOver) return;
   vhp = Math.max(0, vhp - n);
@@ -1588,7 +1588,7 @@ function vBeat2() { // tuesday — Engage & support (jasmine)
         vLedger.postedFine = true;
         vResolve([
           { type: 'post', p: { bg: 'linear-gradient(135deg,#26262b,#141417)', body: 'im fine guys 😅 stop dming me' } },
-          result('saying you are fine ends the conversation. it also means nobody knows to help.', () => vDrain(3), vBeat3),
+          result('saying you are fine ends the conversation. it also means nobody knows to help.', () => vDrain(4), vBeat3),
         ]);
       } },
   ] });
@@ -1624,7 +1624,7 @@ function vSendReply() {
   c.done = true;
   snd.pop();
   $('vreplyzone').innerHTML = `<div class="comment valreply" style="margin-top:14px"><img class="cavatar" src="${VAL_AVI}" alt=""><div class="cbody"><div class="ctext"><b>${VAL}</b>${esc(text)}</div><div class="cmeta">Just now</div></div></div>`;
-  vDeck.splice(vIdx + 1, 0, result('replying felt like doing something. but it just gives them a reaction to pass around.', () => vDrain(3), vBeat4));
+  vDeck.splice(vIdx + 1, 0, result('replying felt like doing something. but it just gives them a reaction to pass around.', () => vDrain(4), vBeat4));
   $('vtaphint').style.display = 'block';
 }
 function vBeat4() { // wednesday night — Set boundaries (put it down)
@@ -1660,7 +1660,7 @@ function vBeat5() { // thursday — Engage & support (a real adult)
         vResolve([ result(`<span class="act support">${ACT_LABEL.support}</span><br><br>she did not fully get it. she stayed with you anyway.`, () => vHeal(4), vEndingBeat) ]);
       } },
     { label: 'Say you are just tired', sub: 'easier than explaining', fn() {
-        vResolve([ result('she believed you. dinner moved on. you kept it to yourself.', () => vDrain(2), vEndingBeat) ]);
+        vResolve([ result('she believed you. dinner moved on. you kept it to yourself.', () => vDrain(3), vEndingBeat) ]);
       } },
   ] });
 }
